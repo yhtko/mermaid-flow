@@ -370,6 +370,16 @@ function FlowModeler() {
     window.setTimeout(() => setCopyLabel("Copy"), 1400);
   }
 
+  function exportMarkdown() {
+    const blob = new Blob([manualSection], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = safeFileName(flow.title, "md");
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function exportImage(kind: "png" | "svg") {
     setExportMode(true);
     setSelectedItem(null);
@@ -415,16 +425,7 @@ function FlowModeler() {
         <div className="admin-actions">
           <div className="admin-toolbar-title">Flow Management</div>
           <button type="button" onClick={() => setExportOpen(true)}>
-            <Download size={15} /> Export
-          </button>
-          <button type="button" onClick={exportJson}>
-            <Download size={15} /> Export JSON
-          </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            <FileUp size={15} /> Import JSON
-          </button>
-          <button type="button" onClick={() => setMermaidOpen(true)}>
-            <FileCode2 size={15} /> Export Mermaid
+            <Download size={15} /> Export Manual
           </button>
           <button type="button" onClick={resetSample}>
             <RotateCcw size={15} /> Reset Sample
@@ -552,6 +553,7 @@ function FlowModeler() {
           mermaidCode={mermaidCode}
           onClose={() => setExportOpen(false)}
           onCopy={copyGeneratedText}
+          onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
           onExportSvg={() => exportImage("svg")}
           onExportJson={exportJson}
@@ -995,6 +997,7 @@ function ExportPanel({
   mermaidCode,
   onClose,
   onCopy,
+  onExportMarkdown,
   onExportPng,
   onExportSvg,
   onExportJson,
@@ -1008,41 +1011,131 @@ function ExportPanel({
   mermaidCode: string;
   onClose: () => void;
   onCopy: (text: string) => void;
+  onExportMarkdown: () => void;
   onExportPng: () => void;
   onExportSvg: () => void;
   onExportJson: () => void;
   onImportJson: () => void;
 }) {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <section className="export-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
         <div className="section-heading">
           <div>
-            <h2>Export</h2>
-            <p>Generate diagram images and manual-ready text for {flow.title}.</p>
+            <h2>Export Manual</h2>
+            <p>Generate a simple manual from sections and included steps.</p>
           </div>
           <button type="button" onClick={onClose}>Close</button>
         </div>
-        <div className="export-panel-actions">
-          <button type="button" onClick={onExportPng}>Export PNG</button>
-          <button type="button" onClick={onExportSvg}>Export SVG</button>
-          <button type="button" onClick={() => onCopy(mermaidCode)}>Copy Mermaid</button>
-          <button type="button" onClick={() => onCopy(japaneseDescription)}>Copy Japanese Description</button>
-          <button type="button" onClick={() => onCopy(englishDescription)}>Copy English Description</button>
-          <button type="button" onClick={() => onCopy(responsibilityTable)}>Copy Responsibility Table</button>
-          <button type="button" onClick={() => onCopy(manualSection)}>Copy Manual Section</button>
-          <button type="button" onClick={onExportJson}>Export JSON</button>
-          <button type="button" onClick={onImportJson}>Import JSON</button>
+        <div className="manual-export-actions">
+          <button className="primary-action" type="button" onClick={() => onCopy(manualSection)}>
+            <Copy size={16} /> Copy Manual
+          </button>
+          <button type="button" onClick={onExportMarkdown}>
+            <Download size={16} /> Export Markdown
+          </button>
+          <button type="button" onClick={onExportPng}>
+            <Download size={16} /> Export PNG
+          </button>
         </div>
-        <p className="json-note">JSON is for saving and re-editing this flow definition.</p>
-        <div className="export-preview-grid">
-          <PreviewBlock title="Description JP Preview" text={japaneseDescription} />
-          <PreviewBlock title="Description EN Preview" text={englishDescription} />
-          <PreviewBlock title="Responsibility Table Preview" text={responsibilityTable} />
-          <PreviewBlock title="Manual Section Preview" text={manualSection} />
+
+        <ManualDocumentPreview flow={flow} />
+
+        <div className="advanced-export">
+          <button className="advanced-export-toggle" type="button" onClick={() => setAdvancedOpen((current) => !current)}>
+            {advancedOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            Advanced Export
+          </button>
+          {advancedOpen && (
+            <div className="advanced-export-content">
+              <div className="export-panel-actions">
+                <button type="button" onClick={onExportSvg}>
+                  <Download size={15} /> Export SVG
+                </button>
+                <button type="button" onClick={() => onCopy(mermaidCode)}>
+                  <FileCode2 size={15} /> Copy Mermaid
+                </button>
+                <button type="button" onClick={() => onCopy(japaneseDescription)}>
+                  <Copy size={15} /> Copy Japanese Description
+                </button>
+                <button type="button" onClick={() => onCopy(englishDescription)}>
+                  <Copy size={15} /> Copy English Description
+                </button>
+                <button type="button" onClick={() => onCopy(responsibilityTable)}>
+                  <Copy size={15} /> Copy Responsibility Table
+                </button>
+                <button type="button" onClick={onExportJson}>
+                  <Download size={15} /> Export JSON
+                </button>
+                <button type="button" onClick={onImportJson}>
+                  <FileUp size={15} /> Import JSON
+                </button>
+              </div>
+              <p className="json-note">JSON is for saving and re-editing this flow definition.</p>
+              <div className="export-preview-grid">
+                <PreviewBlock title="Description JP Preview" text={japaneseDescription} />
+                <PreviewBlock title="Description EN Preview" text={englishDescription} />
+                <PreviewBlock title="Responsibility Table Preview" text={responsibilityTable} />
+                <PreviewBlock title="Manual Markdown Preview" text={manualSection} />
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
+  );
+}
+
+function ManualDocumentPreview({ flow }: { flow: FlowDefinition }) {
+  const sections = [...(flow.manualSections ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sectionList = sections.length
+    ? sections
+    : [{ id: "MAIN_FLOW", title: "Main Flow", purpose: "", nodeIds: flow.nodes.map((node) => node.id), sortOrder: 10 }];
+  const laneById = new Map(flow.lanes.map((lane) => [lane.id, lane.label]));
+
+  return (
+    <article className="manual-preview" aria-label="Manual Preview">
+      <h1>{flow.title}</h1>
+      <section>
+        <h2>Overview</h2>
+        <p>This document summarizes the main manufacturing flow based on the current flow diagram.</p>
+      </section>
+      <section>
+        <h2>Manual Sections</h2>
+        {sectionList.map((section) => {
+          const nodeIds = new Set(section.nodeIds);
+          const steps = flow.nodes.filter((node) => nodeIds.has(node.id));
+          return (
+            <section className="manual-preview-section" key={section.id}>
+              <h3>{section.title}</h3>
+              <h4>Purpose:</h4>
+              <p>{section.purpose?.trim() || "No description provided."}</p>
+              <h4>Included Steps:</h4>
+              {steps.length === 0 ? (
+                <ul>
+                  <li>No steps selected.</li>
+                </ul>
+              ) : (
+                <ul>
+                  {steps.map((step) => (
+                    <li key={step.id}>
+                      <strong>{step.id}</strong> - {step.label.replace(/\n/g, " / ")}
+                      <span>Lane: {laneById.get(step.laneId) ?? step.laneId} / Type: {step.type ?? "process"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </section>
+      <section>
+        <h2>Flow Image</h2>
+        <p className="flow-image-placeholder">[Insert exported PNG or SVG here]</p>
+      </section>
+    </article>
   );
 }
 

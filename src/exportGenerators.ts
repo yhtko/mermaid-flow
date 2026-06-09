@@ -21,6 +21,14 @@ function sectionSteps(flow: FlowDefinition, section: ManualSection): StepNode[] 
   return flow.nodes.filter((node) => ids.has(node.id));
 }
 
+function laneLabel(flow: FlowDefinition, laneId: string): string {
+  return flow.lanes.find((lane) => lane.id === laneId)?.label ?? laneId;
+}
+
+function stepLine(flow: FlowDefinition, step: StepNode): string {
+  return `- ${step.id} - ${cleanLabel(step.label)} (Lane: ${laneLabel(flow, step.laneId)}, Type: ${step.type ?? "process"})`;
+}
+
 export function safeFileName(title: string, ext: string): string {
   const base = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return `${base || "business-flow"}.${ext}`;
@@ -34,42 +42,31 @@ export function generateJapaneseDescription(flow: FlowDefinition): string {
   const lanes = sortedLanes(flow);
   const sections = sortedSections(flow);
   const firstLane = lanes[0];
-  const firstSection = sections[0];
   const sectionText = sections.length
-    ? `本マニュアルでは、${sections.map((section) => section.title).join("、")}の章に分けて業務を説明します。`
-    : "各業務ステップは責任部署ごとに整理されています。";
+    ? `この簡易手順書は、${sections.map((section) => section.title).join("、")} のセクション単位で構成されています。`
+    : "各ステップは担当領域ごとに整理されています。";
 
-  const sentences = [
-    `本図は、${flow.title}における主要業務フローを示しています。`,
-    firstLane ? `${firstLane.label}から処理が始まり、関係部署へ順番に引き継がれます。` : sectionText,
+  return [
+    `${flow.title} の主要な業務フローをまとめた説明です。`,
+    firstLane ? `${firstLane.label} から処理が始まり、関連する担当領域へ引き継がれます。` : sectionText,
     sectionText,
-    firstSection?.purpose ? `${firstSection.title}の目的は、${firstSection.purpose}です。` : "",
-    "各Stepには短い説明を付けることで、マニュアルや引継ぎ資料にそのまま利用しやすくなります。",
-    "図と責務表を併用することで、担当部署、処理順、各Stepの役割を確認できます。",
-  ].filter(Boolean);
-
-  return sentences.slice(0, 6).join("\n");
+  ].join("\n");
 }
 
 export function generateEnglishDescription(flow: FlowDefinition): string {
   const lanes = sortedLanes(flow);
   const sections = sortedSections(flow);
   const firstLane = lanes[0];
-  const firstSection = sections[0];
   const sectionText = sections.length
     ? `This manual explains the process by sections: ${sections.map((section) => section.title).join(", ")}.`
     : "The steps are organized by responsible area.";
 
-  const sentences = [
+  return [
     `This diagram shows the main business flow for ${flow.title}.`,
     firstLane ? `The process starts from ${firstLane.label} and is handed off to the related responsible areas.` : sectionText,
     sectionText,
-    firstSection?.purpose ? `The purpose of ${firstSection.title} is ${firstSection.purpose}.` : "",
-    "Short step descriptions help the content fit manuals and handover documents.",
     "The diagram and responsibility table help users understand ownership, sequence, and each step's role.",
-  ].filter(Boolean);
-
-  return sentences.slice(0, 6).join("\n");
+  ].join("\n");
 }
 
 export function generateResponsibilityTable(flow: FlowDefinition, _lang: "ja" | "en"): string {
@@ -88,15 +85,17 @@ function generateSectionMarkdown(flow: FlowDefinition, section: ManualSection): 
   const lines = [
     `### ${section.title}`,
     "",
-    section.purpose ? `**Purpose / 目的:** ${section.purpose}` : "**Purpose / 目的:**",
+    "Purpose:",
+    section.purpose?.trim() || "No description provided.",
     "",
-    "| Step | Short Description |",
-    "|---|---|",
+    "Included Steps:",
   ];
 
-  steps.forEach((step) => {
-    lines.push(`| ${cleanLabel(step.label)} | ${step.description ?? ""} |`);
-  });
+  if (steps.length === 0) {
+    lines.push("- No steps selected.");
+  } else {
+    steps.forEach((step) => lines.push(stepLine(flow, step)));
+  }
 
   return lines.join("\n");
 }
@@ -108,36 +107,26 @@ export function generateManualSection(flow: FlowDefinition): string {
     : [
         "### Main Flow",
         "",
-        "| Step | Short Description |",
-        "|---|---|",
-        ...flow.nodes.map((node) => `| ${cleanLabel(node.label)} | ${node.description ?? ""} |`),
+        "Purpose:",
+        "No description provided.",
+        "",
+        "Included Steps:",
+        ...flow.nodes.map((node) => stepLine(flow, node)),
       ].join("\n");
 
   return [
-    `## ${flow.title}`,
+    `# ${flow.title}`,
     "",
-    "### Overview / 概要",
+    "## Overview",
     "",
-    generateJapaneseDescription(flow).split("\n")[0],
+    "This document summarizes the main manufacturing flow based on the current flow diagram.",
     "",
-    generateEnglishDescription(flow).split("\n")[0],
-    "",
-    "### Flow Image / フロー図",
-    "",
-    "[Exported PNG or SVG should be inserted here.]",
-    "",
-    "### Manual Sections / マニュアル章",
+    "## Manual Sections",
     "",
     sectionBlocks,
     "",
-    "### Responsibility / 責務",
+    "## Flow Image",
     "",
-    generateResponsibilityTable(flow, "en"),
-    "",
-    "### Notes / 補足",
-    "",
-    "- Step descriptions should be short and manual-friendly.",
-    "- Section purposes should explain why the group of steps exists.",
-    "- JSON is for saving and re-editing this flow definition.",
+    "[Insert exported PNG or SVG here]",
   ].join("\n");
 }
