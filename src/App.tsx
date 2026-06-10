@@ -1122,7 +1122,7 @@ function ManualDocumentPreview({ flow }: { flow: FlowDefinition }) {
                   {steps.map((step) => (
                     <li key={step.id}>
                       <strong>{step.id}</strong> - {step.label.replace(/\n/g, " / ")}
-                      <span>Lane: {laneById.get(step.laneId) ?? step.laneId} / Type: {step.type ?? "process"}</span>
+                      <span>Lane: {laneById.get(step.laneId) ?? step.laneId} / Type: {step.type ?? "process"}{step.description?.trim() ? ` — ${step.description.trim()}` : ""}</span>
                     </li>
                   ))}
                 </ul>
