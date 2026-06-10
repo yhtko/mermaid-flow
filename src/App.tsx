@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Background, Controls, EdgeChange, MiniMap, NodeChange, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng, toSvg } from "html-to-image";
-import { ChevronDown, ChevronRight, Copy, Download, FileCode2, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Download, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import BusinessNode from "./BusinessNode";
 import {
   FlowDefinition,
@@ -19,10 +19,7 @@ import {
 import { autoLayout, toReactFlowEdges, toReactFlowNodes } from "./reactFlowAdapter";
 import {
   copyText,
-  generateEnglishDescription,
-  generateJapaneseDescription,
   generateManualSection,
-  generateResponsibilityTable,
   safeFileName,
 } from "./exportGenerators";
 
@@ -116,9 +113,6 @@ function FlowModeler() {
     [flow, selectedItem],
   );
   const mermaidCode = useMemo(() => generateMermaid(flow), [flow]);
-  const japaneseDescription = useMemo(() => generateJapaneseDescription(flow), [flow]);
-  const englishDescription = useMemo(() => generateEnglishDescription(flow), [flow]);
-  const responsibilityTable = useMemo(() => generateResponsibilityTable(flow, "en"), [flow]);
   const manualSection = useMemo(() => generateManualSection(flow), [flow]);
 
   useEffect(() => {
@@ -546,16 +540,11 @@ function FlowModeler() {
       {exportOpen && (
         <ExportPanel
           flow={flow}
-          japaneseDescription={japaneseDescription}
-          englishDescription={englishDescription}
-          responsibilityTable={responsibilityTable}
           manualSection={manualSection}
-          mermaidCode={mermaidCode}
           onClose={() => setExportOpen(false)}
           onCopy={copyGeneratedText}
           onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
-          onExportSvg={() => exportImage("svg")}
           onExportJson={exportJson}
           onImportJson={() => fileInputRef.current?.click()}
         />
@@ -990,34 +979,23 @@ function MessageList({ title, items, tone }: { title: string; items: string[]; t
 
 function ExportPanel({
   flow,
-  japaneseDescription,
-  englishDescription,
-  responsibilityTable,
   manualSection,
-  mermaidCode,
   onClose,
   onCopy,
   onExportMarkdown,
   onExportPng,
-  onExportSvg,
   onExportJson,
   onImportJson,
 }: {
   flow: FlowDefinition;
-  japaneseDescription: string;
-  englishDescription: string;
-  responsibilityTable: string;
   manualSection: string;
-  mermaidCode: string;
   onClose: () => void;
   onCopy: (text: string) => void;
   onExportMarkdown: () => void;
   onExportPng: () => void;
-  onExportSvg: () => void;
   onExportJson: () => void;
   onImportJson: () => void;
 }) {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -1043,45 +1021,14 @@ function ExportPanel({
 
         <ManualDocumentPreview flow={flow} />
 
-        <div className="advanced-export">
-          <button className="advanced-export-toggle" type="button" onClick={() => setAdvancedOpen((current) => !current)}>
-            {advancedOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            Advanced Export
+        <div className="json-actions">
+          <button type="button" onClick={onExportJson}>
+            <Download size={15} /> Export JSON
           </button>
-          {advancedOpen && (
-            <div className="advanced-export-content">
-              <div className="export-panel-actions">
-                <button type="button" onClick={onExportSvg}>
-                  <Download size={15} /> Export SVG
-                </button>
-                <button type="button" onClick={() => onCopy(mermaidCode)}>
-                  <FileCode2 size={15} /> Copy Mermaid
-                </button>
-                <button type="button" onClick={() => onCopy(japaneseDescription)}>
-                  <Copy size={15} /> Copy Japanese Description
-                </button>
-                <button type="button" onClick={() => onCopy(englishDescription)}>
-                  <Copy size={15} /> Copy English Description
-                </button>
-                <button type="button" onClick={() => onCopy(responsibilityTable)}>
-                  <Copy size={15} /> Copy Responsibility Table
-                </button>
-                <button type="button" onClick={onExportJson}>
-                  <Download size={15} /> Export JSON
-                </button>
-                <button type="button" onClick={onImportJson}>
-                  <FileUp size={15} /> Import JSON
-                </button>
-              </div>
-              <p className="json-note">JSON is for saving and re-editing this flow definition.</p>
-              <div className="export-preview-grid">
-                <PreviewBlock title="Description JP Preview" text={japaneseDescription} />
-                <PreviewBlock title="Description EN Preview" text={englishDescription} />
-                <PreviewBlock title="Responsibility Table Preview" text={responsibilityTable} />
-                <PreviewBlock title="Manual Markdown Preview" text={manualSection} />
-              </div>
-            </div>
-          )}
+          <button type="button" onClick={onImportJson}>
+            <FileUp size={15} /> Import JSON
+          </button>
+          <p className="json-note">JSON is for saving and re-editing this flow definition.</p>
         </div>
       </section>
     </div>
