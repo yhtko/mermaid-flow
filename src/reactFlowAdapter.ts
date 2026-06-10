@@ -121,6 +121,7 @@ function toSwimlaneReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData |
 export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = "topDown"): Edge[] {
   const laneByStep = new Map(flow.nodes.map((node) => [node.id, node.laneId]));
   const laneOrder = new Map(sortedLanes(flow).map((lane, index) => [lane.id, index]));
+  const routeCounts = new Map<string, number>();
 
   return flow.edges.filter((edge) => edge.to && (edge.flowType ?? "process") === "process").map((edge, index) => {
     const visual = edgeVisuals[edge.flowType ?? "process"];
@@ -134,6 +135,10 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
     const sourceHandle = isSwimlane ? (sameLane ? "bottom" : targetLaneOrder >= sourceLaneOrder ? "right" : "left") : flow.direction === "LR" ? "right" : "bottom";
     const targetHandle = isSwimlane ? (sameLane ? "top" : targetLaneOrder >= sourceLaneOrder ? "left" : "right") : flow.direction === "LR" ? "left" : "top";
     const displayLabel = isSwimlane && label && label.length > 26 ? `${label.slice(0, 25).trimEnd()}...` : label;
+    const backward = targetLaneOrder < sourceLaneOrder;
+    const routeKey = `${edge.from}:${backward ? "backward" : "forward"}`;
+    const routeCount = routeCounts.get(routeKey) ?? 0;
+    routeCounts.set(routeKey, routeCount + 1);
 
     return {
       id: edgeId(edge, index),
@@ -163,6 +168,8 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
         flowType: edge.flowType ?? "process",
         fullLabel: label,
         labelPlacement: sameLane ? "vertical" : "horizontal",
+        routeOffset: sameLane ? 0 : routeCount * 24,
+        routeSide: backward ? "below" : "above",
       },
     };
   });
