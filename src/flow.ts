@@ -22,6 +22,8 @@ export type FlowEdge = {
   flowType?: "process" | "document" | "status" | "reference";
   documentName?: string;
   description?: string;
+  sortOrder?: number;
+  branch?: "left" | "right";
 };
 
 export type ManualSection = {

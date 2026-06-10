@@ -169,15 +169,14 @@ function FlowModeler() {
   }
 
   function addNextStep(from: string) {
-    const existingTargets = new Set(flow.edges.filter((edge) => edge.from === from).map((edge) => edge.to));
-    const target = flow.nodes.find((node) => node.id !== from && !existingTargets.has(node.id));
-    if (!target) return;
-
+    const outgoing = flow.edges.filter((edge) => edge.from === from);
+    const maxOrder = outgoing.reduce((m, e) => Math.max(m, e.sortOrder ?? 0), 0);
     const edge: FlowEdge = {
       id: `edge-${Date.now()}`,
       from,
-      to: target.id,
+      to: "",
       flowType: "process",
+      sortOrder: maxOrder + 10,
     };
     updateFlow((current) => ({ ...current, edges: [...current.edges, edge] }), true);
     setSelectedItem({ type: "edge", id: edge.id! });
@@ -234,6 +233,26 @@ function FlowModeler() {
       }),
       Boolean(patch.from || patch.to || patch.flowType),
     );
+  }
+
+  function reorderNextStep(from: string, edgeIdVal: string, direction: "up" | "down") {
+    const outgoing = flow.edges
+      .map((edge, index) => ({ edge, id: edgeId(edge, index) }))
+      .filter(({ edge }) => edge.from === from)
+      .sort((a, b) => (a.edge.sortOrder ?? 0) - (b.edge.sortOrder ?? 0));
+    const idx = outgoing.findIndex(({ id }) => id === edgeIdVal);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= outgoing.length) return;
+    const orders = outgoing.map(({ edge }) => edge.sortOrder ?? 0);
+    updateFlow((current) => ({
+      ...current,
+      edges: current.edges.map((edge, index) => {
+        const eid = edgeId(edge, index);
+        if (eid === outgoing[idx].id) return { ...edge, sortOrder: orders[swapIdx] };
+        if (eid === outgoing[swapIdx].id) return { ...edge, sortOrder: orders[idx] };
+        return edge;
+      }),
+    }));
   }
 
   function updateManualSection(id: string, patch: Partial<ManualSection>) {
@@ -529,6 +548,7 @@ function FlowModeler() {
           onDeleteStep={deleteStep}
           onDeleteEdge={deleteEdge}
           onAddNextStep={addNextStep}
+          onReorderNextStep={reorderNextStep}
           onAddStep={addStep}
           onSelect={setSelectedItem}
           onUpdateManualSection={updateManualSection}
@@ -724,6 +744,7 @@ function PropertyEditor({
   onDeleteStep,
   onDeleteEdge,
   onAddNextStep,
+  onReorderNextStep,
   onAddStep,
   onSelect,
   onUpdateManualSection,
@@ -739,6 +760,7 @@ function PropertyEditor({
   onDeleteStep: (id: string) => void;
   onDeleteEdge: (id: string) => void;
   onAddNextStep: (from: string) => void;
+  onReorderNextStep: (from: string, edgeId: string, direction: "up" | "down") => void;
   onAddStep: (laneId: string) => void;
   onSelect: (selection: Selection) => void;
   onUpdateManualSection: (id: string, patch: Partial<ManualSection>) => void;
@@ -783,7 +805,10 @@ function PropertyEditor({
   if (selectedItem?.type === "node") {
     const node = flow.nodes.find((item) => item.id === selectedItem.id);
     if (!node) return <Summary flow={flow} validation={validation} />;
-    const outgoing = flow.edges.map((edge, index) => ({ edge, id: edgeId(edge, index) })).filter(({ edge }) => edge.from === node.id);
+    const outgoing = flow.edges
+      .map((edge, index) => ({ edge, id: edgeId(edge, index) }))
+      .filter(({ edge }) => edge.from === node.id)
+      .sort((a, b) => (a.edge.sortOrder ?? 0) - (b.edge.sortOrder ?? 0));
     return (
       <section className="editor-section">
         <EditorHeader title="Step" onDelete={() => onDeleteStep(node.id)} />
@@ -821,9 +846,17 @@ function PropertyEditor({
               <Plus size={13} /> Add
             </button>
           </div>
-          {outgoing.map(({ edge, id }) => (
+          {outgoing.map(({ edge, id }, idx) => (
             <div className="next-editor-row" key={id}>
-              <select value={edge.to} onChange={(event) => onUpdateEdge(id, { to: event.target.value })}>
+              <div className="next-editor-reorder">
+                <button type="button" disabled={idx === 0} onClick={() => onReorderNextStep(node.id, id, "up")} aria-label="Move up">▲</button>
+                <button type="button" disabled={idx === outgoing.length - 1} onClick={() => onReorderNextStep(node.id, id, "down")} aria-label="Move down">▼</button>
+              </div>
+              <select
+                value={edge.to}
+                onChange={(event) => onUpdateEdge(id, { to: event.target.value })}
+              >
+                <option value="">— select —</option>
                 {flow.nodes
                   .filter((item) => item.id !== edge.from)
                   .map((item) => (
@@ -832,7 +865,12 @@ function PropertyEditor({
                     </option>
                   ))}
               </select>
-              <input value={edge.documentName ?? edge.label ?? ""} placeholder="data / label" onChange={(event) => onUpdateEdge(id, { documentName: event.target.value })} />
+              <select value={edge.branch ?? ""} onChange={(event) => onUpdateEdge(id, { branch: (event.target.value || undefined) as FlowEdge["branch"] })}>
+                <option value="">— direction —</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+              <input value={edge.documentName ?? edge.label ?? ""} placeholder="label" onChange={(event) => onUpdateEdge(id, { documentName: event.target.value })} />
               <button type="button" onClick={() => onSelect({ type: "edge", id })}>
                 Select
               </button>
