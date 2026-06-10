@@ -15,6 +15,15 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
 
   return (
     <div className={`business-node ${selected ? "selected" : ""}`} style={{ "--lane-color": color } as React.CSSProperties}>
+      {nodeData.inputChips?.length ? (
+        <div className="business-node-input-chips">
+          {nodeData.inputChips.map((chip) => (
+            <span className="business-node-input-chip" key={chip.id} title={chip.fullLabel}>
+              {chip.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <Handle id="top" type="target" position={Position.Top} />
       <Handle id="left" type="target" position={Position.Left} />
       <Handle id="left-lower" type="target" position={Position.Left} style={{ top: "66%" }} />

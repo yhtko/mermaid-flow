@@ -8,6 +8,11 @@ export type BusinessNodeData = {
   nodeType?: StepNode["type"];
   description?: string;
   laneColor?: string;
+  inputChips?: Array<{
+    id: string;
+    label: string;
+    fullLabel: string;
+  }>;
 };
 
 export type LaneBandNodeData = {
@@ -25,6 +30,7 @@ export const SWIMLANE_LANE_WIDTH = 270;
 export const SWIMLANE_LANE_GAP = 24;
 export const SWIMLANE_ROW_HEIGHT = 172;
 export const SWIMLANE_HEADER_HEIGHT = 62;
+export const SWIMLANE_CHIP_SPACE = 34;
 export const SWIMLANE_PADDING_X = 50;
 export const SWIMLANE_PADDING_Y = 52;
 
@@ -69,6 +75,22 @@ function toSwimlaneReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData |
   const laneIndex = new Map(lanes.map((lane, index) => [lane.id, index]));
   const maxNodeY = Math.max(...flow.nodes.map((node) => node.position?.y ?? SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT), SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT);
   const laneHeight = Math.max(620, maxNodeY + SWIMLANE_NODE_HEIGHT + SWIMLANE_PADDING_Y);
+  const inputChipsByNode = new Map<string, BusinessNodeData["inputChips"]>();
+
+  flow.edges
+    .filter((edge) => edge.to && (edge.flowType ?? "process") === "process")
+    .forEach((edge, index) => {
+      const fullLabel = (edge.documentName || edge.label || "").trim();
+      if (!fullLabel) return;
+
+      const current = inputChipsByNode.get(edge.to) ?? [];
+      current.push({
+        id: edgeId(edge, index),
+        label: fullLabel.length > 26 ? `${fullLabel.slice(0, 25).trimEnd()}...` : fullLabel,
+        fullLabel,
+      });
+      inputChipsByNode.set(edge.to, current);
+    });
 
   const laneBands: Node<LaneBandNodeData>[] = lanes.map((lane, index) => ({
     id: `lane-band-${lane.id}`,
@@ -107,6 +129,7 @@ function toSwimlaneReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData |
         nodeType: node.type,
         description: node.description,
         laneColor: lane?.color,
+        inputChips: inputChipsByNode.get(node.id),
       },
       zIndex: 2,
       style: {
@@ -146,7 +169,7 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
           ? "right-upper"
           : "left-lower"
       : flow.direction === "LR" ? "left" : "top";
-    const displayLabel = isSwimlane && label && label.length > 26 ? `${label.slice(0, 25).trimEnd()}...` : label;
+    const displayLabel = isSwimlane ? undefined : label;
 
     return {
       id: edgeId(edge, index),
@@ -386,7 +409,7 @@ export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
         ...node,
         position: {
           x: SWIMLANE_PADDING_X + lanePos * (SWIMLANE_LANE_WIDTH + SWIMLANE_LANE_GAP) + (SWIMLANE_LANE_WIDTH - SWIMLANE_NODE_WIDTH) / 2,
-          y: SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT + row * SWIMLANE_ROW_HEIGHT,
+          y: SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT + SWIMLANE_CHIP_SPACE + row * SWIMLANE_ROW_HEIGHT,
         },
       };
     }),
