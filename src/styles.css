@@ -191,6 +191,10 @@ pre {
   position: relative;
 }
 
+.swimlane-flow {
+  background: #f7fafc;
+}
+
 .export-title {
   background: #ffffff;
   border-bottom: 1px solid #d7e2ee;
@@ -682,6 +686,11 @@ pre {
   width: 190px;
 }
 
+.swimlane-flow .business-node {
+  min-height: 90px;
+  width: 210px;
+}
+
 .business-node.selected {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.24);
@@ -715,9 +724,50 @@ pre {
   padding: 2px 8px;
 }
 
+.lane-band-node {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--lane-color) 24%, #ffffff) 0 62px, color-mix(in srgb, var(--lane-color) 11%, #ffffff) 62px 100%);
+  border-left: 1px solid color-mix(in srgb, var(--lane-color) 48%, #b7c7d8);
+  border-right: 1px solid color-mix(in srgb, var(--lane-color) 48%, #b7c7d8);
+  border-top: 1px solid color-mix(in srgb, var(--lane-color) 58%, #9eb3c8);
+  box-shadow: inset 0 -1px 0 #d7e2ee;
+  color: #0f2544;
+  height: 100%;
+  pointer-events: none;
+  width: 100%;
+}
+
+.lane-band-header {
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--lane-color) 52%, #b7c7d8);
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  height: 62px;
+  justify-content: center;
+  line-height: 1.2;
+  overflow: hidden;
+  padding: 8px 12px;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
 .react-flow__edge.selected path {
   stroke: #2563eb;
   stroke-width: 4;
+}
+
+.react-flow__edge-text {
+  fill: #172033;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.react-flow__edge-textbg {
+  fill: #ffffff;
+  stroke: #d7e2ee;
+  stroke-width: 1px;
 }
 
 .export-mode-flow {

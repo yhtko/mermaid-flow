@@ -15,11 +15,19 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
 
   return (
     <div className={`business-node ${selected ? "selected" : ""}`} style={{ "--lane-color": color } as React.CSSProperties}>
-      <Handle type="target" position={targetPosition ?? Position.Left} />
+      <Handle id="top" type="target" position={Position.Top} />
+      <Handle id="left" type="target" position={Position.Left} />
+      <Handle id="right" type="target" position={Position.Right} />
+      <Handle id="bottom" type="target" position={Position.Bottom} />
+      <Handle id={targetPosition === Position.Bottom ? "legacy-bottom-target" : "legacy-left-target"} type="target" position={targetPosition ?? Position.Left} />
       <div className="business-node-lane">{nodeData.laneLabel}</div>
       <div className="business-node-label">{nodeData.label}</div>
       <div className="business-node-type">{nodeData.nodeType ?? "process"}</div>
-      <Handle type="source" position={sourcePosition ?? Position.Right} />
+      <Handle id="top" type="source" position={Position.Top} />
+      <Handle id="left" type="source" position={Position.Left} />
+      <Handle id="right" type="source" position={Position.Right} />
+      <Handle id="bottom" type="source" position={Position.Bottom} />
+      <Handle id={sourcePosition === Position.Bottom ? "legacy-bottom-source" : "legacy-right-source"} type="source" position={sourcePosition ?? Position.Right} />
     </div>
   );
 }

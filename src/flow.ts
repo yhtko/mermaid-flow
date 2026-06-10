@@ -241,6 +241,8 @@ export function normalizeFlow(input: FlowDefinition): FlowDefinition {
           flowType: edge.flowType ?? "process",
           documentName: edge.documentName,
           description: edge.description,
+          sortOrder: Number(edge.sortOrder ?? index * 10),
+          branch: edge.branch,
         }))
       : [],
     manualSections: Array.isArray(input.manualSections)

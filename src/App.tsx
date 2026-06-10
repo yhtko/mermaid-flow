@@ -4,6 +4,7 @@ import "@xyflow/react/dist/style.css";
 import { toPng, toSvg } from "html-to-image";
 import { ChevronDown, ChevronRight, ChevronUp, Copy, Download, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import BusinessNode from "./BusinessNode";
+import LaneBandNode from "./LaneBandNode";
 import {
   FlowDefinition,
   FlowEdge,
@@ -16,7 +17,7 @@ import {
   normalizeFlow,
   validateFlow,
 } from "./flow";
-import { autoLayout, toReactFlowEdges, toReactFlowNodes } from "./reactFlowAdapter";
+import { LayoutMode, autoLayout, toReactFlowEdges, toReactFlowNodes } from "./reactFlowAdapter";
 import {
   copyText,
   generateManualSection,
@@ -24,7 +25,7 @@ import {
 } from "./exportGenerators";
 
 const storageKey = "business-flow-definition";
-const nodeTypes = { businessNode: BusinessNode };
+const nodeTypes = { businessNode: BusinessNode, laneBand: LaneBandNode };
 const stepTypes: Array<NonNullable<StepNode["type"]>> = ["system", "app", "process", "screen", "data"];
 const flowTypes: Array<NonNullable<FlowEdge["flowType"]>> = ["process", "document", "status", "reference"];
 const laneColorPalette = [
@@ -91,6 +92,7 @@ function FlowModeler() {
   const [toast, setToast] = useState("");
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [viewMode, setViewMode] = useState<ViewMode>("full");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("topDown");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const reactFlow = useReactFlow();
 
@@ -98,19 +100,19 @@ function FlowModeler() {
   const sortedLanes = useMemo(() => [...flow.lanes].sort((a, b) => a.sortOrder - b.sortOrder), [flow.lanes]);
   const rfNodes = useMemo(
     () =>
-      toReactFlowNodes(flow).map((node) => ({
+      toReactFlowNodes(flow, layoutMode).map((node) => ({
         ...node,
         selected: selectedItem?.type === "node" && selectedItem.id === node.id,
       })),
-    [flow, selectedItem],
+    [flow, layoutMode, selectedItem],
   );
   const rfEdges = useMemo(
     () =>
-      toReactFlowEdges(flow).map((edge) => ({
+      toReactFlowEdges(flow, layoutMode).map((edge) => ({
         ...edge,
         selected: selectedItem?.type === "edge" && selectedItem.id === edge.id,
       })),
-    [flow, selectedItem],
+    [flow, layoutMode, selectedItem],
   );
   const mermaidCode = useMemo(() => generateMermaid(flow), [flow]);
   const manualSection = useMemo(() => generateManualSection(flow), [flow]);
@@ -135,13 +137,18 @@ function FlowModeler() {
     }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [flow.nodes, reactFlow, selectedItem, viewMode]);
+  }, [flow.nodes, layoutMode, reactFlow, selectedItem, viewMode]);
 
   function updateFlow(updater: (current: FlowDefinition) => FlowDefinition, relayout = false) {
     setFlow((current) => {
       const next = updater(current);
-      return relayout ? autoLayout(next) : next;
+      return relayout ? autoLayout(next, layoutMode) : next;
     });
+  }
+
+  function changeLayoutMode(nextMode: LayoutMode) {
+    setLayoutMode(nextMode);
+    setFlow((current) => autoLayout(current, nextMode));
   }
 
   function addLane() {
@@ -352,7 +359,7 @@ function FlowModeler() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const nextFlow = autoLayout(normalizeFlow(JSON.parse(String(reader.result)) as FlowDefinition));
+        const nextFlow = autoLayout(normalizeFlow(JSON.parse(String(reader.result)) as FlowDefinition), layoutMode);
         const result = validateFlow(nextFlow);
         if (result.errors.length > 0) {
           setImportError(result.errors.join(" "));
@@ -447,6 +454,15 @@ function FlowModeler() {
             Step Focus
           </button>
         </div>
+        <div className="view-mode-group" aria-label="Layout mode">
+          <span>Layout</span>
+          <button type="button" className={layoutMode === "topDown" ? "active" : ""} onClick={() => changeLayoutMode("topDown")}>
+            Top Down
+          </button>
+          <button type="button" className={layoutMode === "swimlane" ? "active" : ""} onClick={() => changeLayoutMode("swimlane")}>
+            Swimlane
+          </button>
+        </div>
         <div className="admin-actions">
           <div className="admin-toolbar-title">Flow Management</div>
           <button type="button" onClick={() => setExportOpen(true)}>
@@ -517,13 +533,16 @@ function FlowModeler() {
       <section className="canvas-panel">
         {exportMode && <div className="export-title">{flow.title}</div>}
         <ReactFlow
-          className={exportMode ? "export-mode-flow" : ""}
+          className={`${exportMode ? "export-mode-flow" : ""} ${layoutMode === "swimlane" ? "swimlane-flow" : ""}`.trim()}
           nodes={exportMode ? rfNodes.map((node) => ({ ...node, selected: false })) : rfNodes}
           edges={rfEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onNodeClick={(_, node) => setSelectedItem({ type: "node", id: node.id })}
+          onNodeClick={(_, node) => {
+            if (node.type === "laneBand") return;
+            setSelectedItem({ type: "node", id: node.id });
+          }}
           onEdgeClick={(_, edge) => setSelectedItem({ type: "edge", id: edge.id })}
           onPaneClick={() => setSelectedItem(null)}
           fitView
