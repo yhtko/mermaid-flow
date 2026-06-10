@@ -107,37 +107,55 @@ export function autoLayout(flow: FlowDefinition): FlowDefinition {
     });
   });
 
-  // Re-sort siblings by sortOrder so the first next-step ends up
-  // leftmost (TD) or topmost (LR) instead of dagre's arbitrary order.
+  // Build descendant sets so we can shift whole subtrees together.
+  const childrenOf = new Map<string, string[]>();
+  flow.nodes.forEach((n) => childrenOf.set(n.id, []));
+  flow.edges.filter((e) => e.to).forEach((e) => childrenOf.get(e.from)?.push(e.to));
+
+  function descendants(id: string): string[] {
+    const result: string[] = [];
+    const stack = [...(childrenOf.get(id) ?? [])];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      result.push(cur);
+      stack.push(...(childrenOf.get(cur) ?? []));
+    }
+    return result;
+  }
+
+  // Re-sort siblings by sortOrder and shift their entire subtrees.
   const horizontal = flow.direction === "LR";
-  const sortedOutgoing = new Map<string, string[]>();
   flow.nodes.forEach((node) => {
     const children = flow.edges
       .filter((e) => e.from === node.id && e.to)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
       .map((e) => e.to);
-    if (children.length > 1) sortedOutgoing.set(node.id, children);
-  });
+    if (children.length < 2) return;
 
-  sortedOutgoing.forEach((children) => {
-    const positions = children
-      .map((id) => positioned.get(id))
-      .filter(Boolean) as { x: number; y: number }[];
+    const positions = children.map((id) => positioned.get(id)!).filter(Boolean);
     if (positions.length < 2) return;
 
     if (horizontal) {
-      // LR: sort siblings top-to-bottom by sortOrder
+      // LR: assign sorted Y positions top-to-bottom
       const ys = [...positions.map((p) => p.y)].sort((a, b) => a - b);
       children.forEach((id, i) => {
-        const pos = positioned.get(id);
-        if (pos) positioned.set(id, { ...pos, y: ys[i] });
+        const delta = ys[i] - (positioned.get(id)?.y ?? 0);
+        if (delta === 0) return;
+        [id, ...descendants(id)].forEach((did) => {
+          const p = positioned.get(did);
+          if (p) positioned.set(did, { ...p, y: p.y + delta });
+        });
       });
     } else {
-      // TD: sort siblings left-to-right by sortOrder
+      // TD: assign sorted X positions left-to-right
       const xs = [...positions.map((p) => p.x)].sort((a, b) => a - b);
       children.forEach((id, i) => {
-        const pos = positioned.get(id);
-        if (pos) positioned.set(id, { ...pos, x: xs[i] });
+        const delta = xs[i] - (positioned.get(id)?.x ?? 0);
+        if (delta === 0) return;
+        [id, ...descendants(id)].forEach((did) => {
+          const p = positioned.get(did);
+          if (p) positioned.set(did, { ...p, x: p.x + delta });
+        });
       });
     }
   });
