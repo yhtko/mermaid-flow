@@ -25,7 +25,7 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
         </div>
       ) : null}
       <Handle id="top" type="target" position={Position.Top} />
-      <Handle id="top-right" type="target" position={Position.Top} style={{ left: "72%" }} />
+      <Handle id="top-right" type="target" position={Position.Top} style={{ left: "72%", top: "-7px" }} />
       <Handle id="left" type="target" position={Position.Left} />
       <Handle id="left-lower" type="target" position={Position.Left} style={{ top: "66%" }} />
       <Handle id="right" type="target" position={Position.Right} />
@@ -41,7 +41,7 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
       <Handle id="right" type="source" position={Position.Right} />
       <Handle id="right-lower" type="source" position={Position.Right} style={{ top: "66%" }} />
       <Handle id="bottom" type="source" position={Position.Bottom} />
-      <Handle id="bottom-right" type="source" position={Position.Bottom} style={{ left: "72%" }} />
+      <Handle id="bottom-right" type="source" position={Position.Bottom} style={{ bottom: "-7px", left: "72%" }} />
       <Handle id={sourcePosition === Position.Bottom ? "legacy-bottom-source" : "legacy-right-source"} type="source" position={sourcePosition ?? Position.Right} />
     </div>
   );
