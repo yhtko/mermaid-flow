@@ -421,6 +421,12 @@ function FlowModeler() {
           <button type="button" onClick={() => setExportOpen(true)}>
             <Download size={15} /> Export Manual
           </button>
+          <button type="button" onClick={exportJson}>
+            <Download size={15} /> Export JSON
+          </button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}>
+            <FileUp size={15} /> Import JSON
+          </button>
           <button type="button" onClick={resetSample}>
             <RotateCcw size={15} /> Reset Sample
           </button>
@@ -545,8 +551,6 @@ function FlowModeler() {
           onCopy={copyGeneratedText}
           onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
-          onExportJson={exportJson}
-          onImportJson={() => fileInputRef.current?.click()}
         />
       )}
       {toast && <div className="toast">{toast}</div>}
@@ -984,8 +988,6 @@ function ExportPanel({
   onCopy,
   onExportMarkdown,
   onExportPng,
-  onExportJson,
-  onImportJson,
 }: {
   flow: FlowDefinition;
   manualSection: string;
@@ -993,10 +995,7 @@ function ExportPanel({
   onCopy: (text: string) => void;
   onExportMarkdown: () => void;
   onExportPng: () => void;
-  onExportJson: () => void;
-  onImportJson: () => void;
 }) {
-
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <section className="export-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
@@ -1018,18 +1017,7 @@ function ExportPanel({
             <Download size={16} /> Export PNG
           </button>
         </div>
-
         <ManualDocumentPreview flow={flow} />
-
-        <div className="json-actions">
-          <button type="button" onClick={onExportJson}>
-            <Download size={15} /> Export JSON
-          </button>
-          <button type="button" onClick={onImportJson}>
-            <FileUp size={15} /> Import JSON
-          </button>
-          <p className="json-note">JSON is for saving and re-editing this flow definition.</p>
-        </div>
       </section>
     </div>
   );
