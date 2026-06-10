@@ -26,7 +26,9 @@ function laneLabel(flow: FlowDefinition, laneId: string): string {
 }
 
 function stepLine(flow: FlowDefinition, step: StepNode): string {
-  return `- ${step.id} - ${cleanLabel(step.label)} (Lane: ${laneLabel(flow, step.laneId)}, Type: ${step.type ?? "process"})`;
+  const desc = step.description?.trim();
+  const suffix = desc ? ` — ${desc}` : "";
+  return `- ${step.id} - ${cleanLabel(step.label)} (Lane: ${laneLabel(flow, step.laneId)}, Type: ${step.type ?? "process"})${suffix}`;
 }
 
 export function safeFileName(title: string, ext: string): string {
