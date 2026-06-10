@@ -430,8 +430,8 @@ pre {
 
 .next-editor-reorder {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  gap: 0;
 }
 
 .next-editor-reorder button {
@@ -439,9 +439,9 @@ pre {
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 9px;
-  line-height: 1;
-  padding: 1px;
+  display: flex;
+  align-items: center;
+  padding: 2px 1px;
 }
 
 .next-editor-reorder button:hover:not(:disabled) {
@@ -449,7 +449,7 @@ pre {
 }
 
 .next-editor-reorder button:disabled {
-  opacity: 0.25;
+  opacity: 0.2;
   cursor: default;
 }
 

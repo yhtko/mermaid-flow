@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Background, Controls, EdgeChange, MiniMap, NodeChange, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng, toSvg } from "html-to-image";
-import { ChevronDown, ChevronRight, Copy, Download, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, Download, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import BusinessNode from "./BusinessNode";
 import {
   FlowDefinition,
@@ -852,8 +852,8 @@ function PropertyEditor({
           {outgoing.map(({ edge, id }, idx) => (
             <div className="next-editor-row" key={id}>
               <div className="next-editor-reorder">
-                <button type="button" disabled={idx === 0} onClick={() => onReorderNextStep(node.id, id, "up")} aria-label="Move up">▲</button>
-                <button type="button" disabled={idx === outgoing.length - 1} onClick={() => onReorderNextStep(node.id, id, "down")} aria-label="Move down">▼</button>
+                <button type="button" disabled={idx === 0} onClick={() => onReorderNextStep(node.id, id, "up")} aria-label="Move up"><ChevronUp size={11} /></button>
+                <button type="button" disabled={idx === outgoing.length - 1} onClick={() => onReorderNextStep(node.id, id, "down")} aria-label="Move down"><ChevronDown size={11} /></button>
               </div>
               <select
                 value={edge.to}
