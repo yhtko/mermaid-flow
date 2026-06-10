@@ -436,7 +436,7 @@ function FlowModeler() {
     setExportMode(true);
     setSelectedItem(null);
     await new Promise((resolve) => window.setTimeout(resolve, 80));
-    reactFlow.fitView({ duration: 0, padding: 0.18 });
+    reactFlow.fitView({ duration: 0, padding: 0.22 });
     await new Promise((resolve) => window.setTimeout(resolve, 260));
 
     const element = document.querySelector(".react-flow__viewport") as HTMLElement | null;
@@ -446,18 +446,45 @@ function FlowModeler() {
     }
 
     const nodes = reactFlow.getNodes();
-    const padding = 40;
-    const minX = Math.min(...nodes.map((n) => n.position.x)) - padding;
-    const minY = Math.min(...nodes.map((n) => n.position.y)) - padding;
-    const maxX = Math.max(...nodes.map((n) => n.position.x + (n.measured?.width ?? 200))) + padding;
-    const maxY = Math.max(...nodes.map((n) => n.position.y + (n.measured?.height ?? 80))) + padding;
+    const contentNodes = nodes.length ? nodes : rfNodes;
+    const nodeWidth = (node: (typeof contentNodes)[number]) => {
+      const styleWidth = typeof node.style?.width === "number" ? node.style.width : Number(node.style?.width);
+      return node.measured?.width ?? (Number.isFinite(styleWidth) ? styleWidth : 200);
+    };
+    const nodeHeight = (node: (typeof contentNodes)[number]) => {
+      const styleHeight = typeof node.style?.height === "number" ? node.style.height : Number(node.style?.height);
+      return node.measured?.height ?? (Number.isFinite(styleHeight) ? styleHeight : 90);
+    };
+    const padding = {
+      top: layoutMode === "swimlane" ? 96 : 86,
+      right: 84,
+      bottom: 86,
+      left: 84,
+    };
+    const minX = Math.floor(Math.min(...contentNodes.map((n) => n.position.x)) - padding.left);
+    const minY = Math.floor(Math.min(...contentNodes.map((n) => n.position.y)) - padding.top);
+    const maxX = Math.ceil(Math.max(...contentNodes.map((n) => n.position.x + nodeWidth(n))) + padding.right);
+    const maxY = Math.ceil(Math.max(...contentNodes.map((n) => n.position.y + nodeHeight(n))) + padding.bottom);
     const width = maxX - minX;
     const height = maxY - minY;
 
     const dataUrl =
       kind === "png"
-        ? await toPng(element, { backgroundColor: "#ffffff", pixelRatio: 2, width, height, style: { transform: `translate(${-minX}px, ${-minY}px)` } })
-        : await toSvg(element, { backgroundColor: "#ffffff", width, height, style: { transform: `translate(${-minX}px, ${-minY}px)` } });
+        ? await toPng(element, {
+            backgroundColor: "#ffffff",
+            cacheBust: true,
+            pixelRatio: 2,
+            width,
+            height,
+            style: { transform: `translate(${-minX}px, ${-minY}px)` },
+          })
+        : await toSvg(element, {
+            backgroundColor: "#ffffff",
+            cacheBust: true,
+            width,
+            height,
+            style: { transform: `translate(${-minX}px, ${-minY}px)` },
+          });
     const link = document.createElement("a");
     link.href = dataUrl;
     link.download = safeFileName(flow.title, kind);
@@ -628,6 +655,7 @@ function FlowModeler() {
           onCopy={copyGeneratedText}
           onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
+          onExportSvg={() => exportImage("svg")}
           onUpdateOverview={(overview) => updateFlow((current) => ({ ...current, overview }))}
         />
       )}
@@ -1130,6 +1158,7 @@ function ExportPanel({
   onCopy,
   onExportMarkdown,
   onExportPng,
+  onExportSvg,
   onUpdateOverview,
 }: {
   flow: FlowDefinition;
@@ -1138,6 +1167,7 @@ function ExportPanel({
   onCopy: (text: string) => void;
   onExportMarkdown: () => void;
   onExportPng: () => void;
+  onExportSvg: () => void;
   onUpdateOverview: (overview: string) => void;
 }) {
   return (
@@ -1159,6 +1189,9 @@ function ExportPanel({
           </button>
           <button type="button" onClick={onExportPng}>
             <Download size={16} /> Export PNG
+          </button>
+          <button type="button" onClick={onExportSvg}>
+            <Download size={16} /> Export SVG
           </button>
         </div>
         <ManualDocumentPreview flow={flow} onUpdateOverview={onUpdateOverview} />

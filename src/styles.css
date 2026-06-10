@@ -959,7 +959,7 @@ pre {
 .manual-export-actions {
   display: grid;
   gap: 8px;
-  grid-template-columns: 1.25fr 1fr 1fr;
+  grid-template-columns: 1.25fr repeat(3, 1fr);
   margin-bottom: 16px;
 }
 
