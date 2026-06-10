@@ -475,9 +475,11 @@ function FlowModeler() {
         />
         <ManualSectionList
           sections={flow.manualSections ?? []}
+          overview={flow.overview ?? ""}
           selectedItem={selectedItem}
           onSelect={setSelectedItem}
           onAddSection={addManualSection}
+          onUpdateOverview={(overview) => updateFlow((current) => ({ ...current, overview }))}
         />
       </aside>
 
@@ -551,7 +553,6 @@ function FlowModeler() {
           onCopy={copyGeneratedText}
           onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
-          onUpdateOverview={(overview) => updateFlow((current) => ({ ...current, overview }))}
         />
       )}
       {toast && <div className="toast">{toast}</div>}
@@ -643,14 +644,18 @@ function LaneTree({
 
 function ManualSectionList({
   sections,
+  overview,
   selectedItem,
   onSelect,
   onAddSection,
+  onUpdateOverview,
 }: {
   sections: ManualSection[];
+  overview: string;
   selectedItem: Selection;
   onSelect: (selection: Selection) => void;
   onAddSection: () => void;
+  onUpdateOverview: (overview: string) => void;
 }) {
   const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
   return (
@@ -658,6 +663,15 @@ function ManualSectionList({
       <div className="section-heading">
         <h2>Manual Sections</h2>
         <span>{sections.length}</span>
+      </div>
+      <div className="overview-field">
+        <label className="field-label">Overview</label>
+        <textarea
+          className="overview-input"
+          value={overview}
+          placeholder="Describe the overall flow..."
+          onChange={(event) => onUpdateOverview(event.target.value)}
+        />
       </div>
       <div className="manual-section-items">
         {sortedSections.map((section) => (
@@ -974,7 +988,6 @@ function ExportPanel({
   onCopy,
   onExportMarkdown,
   onExportPng,
-  onUpdateOverview,
 }: {
   flow: FlowDefinition;
   manualSection: string;
@@ -982,7 +995,6 @@ function ExportPanel({
   onCopy: (text: string) => void;
   onExportMarkdown: () => void;
   onExportPng: () => void;
-  onUpdateOverview: (overview: string) => void;
 }) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -1005,14 +1017,13 @@ function ExportPanel({
             <Download size={16} /> Export PNG
           </button>
         </div>
-        <ManualDocumentPreview flow={flow} onUpdateOverview={onUpdateOverview} />
+        <ManualDocumentPreview flow={flow} />
       </section>
     </div>
   );
 }
 
-function ManualDocumentPreview({ flow, onUpdateOverview }: { flow: FlowDefinition; onUpdateOverview: (overview: string) => void }) {
-  const [overviewOpen, setOverviewOpen] = useState(false);
+function ManualDocumentPreview({ flow }: { flow: FlowDefinition }) {
   const sections = [...(flow.manualSections ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   const sectionList = sections.length
     ? sections
@@ -1022,20 +1033,12 @@ function ManualDocumentPreview({ flow, onUpdateOverview }: { flow: FlowDefinitio
   return (
     <article className="manual-preview" aria-label="Manual Preview">
       <h1>{flow.title}</h1>
-      <section className="manual-preview-section">
-        <button className="advanced-export-toggle" type="button" onClick={() => setOverviewOpen((o) => !o)}>
-          {overviewOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      {flow.overview?.trim() && (
+        <section>
           <h2>Overview</h2>
-        </button>
-        {overviewOpen && (
-          <textarea
-            className="overview-input"
-            value={flow.overview ?? ""}
-            placeholder="Describe the overall flow..."
-            onChange={(event) => onUpdateOverview(event.target.value)}
-          />
-        )}
-      </section>
+          <p>{flow.overview.trim()}</p>
+        </section>
+      )}
       <section>
         <h2>Manual Sections</h2>
         {sectionList.map((section) => {
