@@ -28,11 +28,13 @@ export const SWIMLANE_NODE_WIDTH = 210;
 export const SWIMLANE_NODE_HEIGHT = 90;
 export const SWIMLANE_LANE_WIDTH = 270;
 export const SWIMLANE_LANE_GAP = 24;
+export const SWIMLANE_COLUMN_GAP = 28;
 export const SWIMLANE_ROW_HEIGHT = 172;
 export const SWIMLANE_HEADER_HEIGHT = 62;
 export const SWIMLANE_CHIP_SPACE = 44;
 export const SWIMLANE_PADDING_X = 50;
 export const SWIMLANE_PADDING_Y = 52;
+const SWIMLANE_LANE_INSET_X = (SWIMLANE_LANE_WIDTH - SWIMLANE_NODE_WIDTH) / 2;
 
 const edgeVisuals: Record<NonNullable<FlowEdge["flowType"]>, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
   process: { stroke: "#64748B", strokeWidth: 1.8 },
@@ -76,6 +78,7 @@ function toSwimlaneReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData |
   const maxNodeY = Math.max(...flow.nodes.map((node) => node.position?.y ?? SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT), SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT);
   const laneHeight = Math.max(620, maxNodeY + SWIMLANE_NODE_HEIGHT + SWIMLANE_PADDING_Y);
   const inputChipsByNode = new Map<string, BusinessNodeData["inputChips"]>();
+  const laneBounds = new Map<string, { x: number; width: number }>();
 
   flow.edges
     .filter((edge) => edge.to && (edge.flowType ?? "process") === "process")
@@ -92,26 +95,46 @@ function toSwimlaneReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData |
       inputChipsByNode.set(edge.to, current);
     });
 
-  const laneBands: Node<LaneBandNodeData>[] = lanes.map((lane, index) => ({
-    id: `lane-band-${lane.id}`,
-    type: "laneBand",
-    position: {
-      x: SWIMLANE_PADDING_X + index * (SWIMLANE_LANE_WIDTH + SWIMLANE_LANE_GAP),
-      y: SWIMLANE_PADDING_Y,
-    },
-    data: {
-      label: lane.label,
-      color: lane.color,
-    },
-    draggable: false,
-    selectable: false,
-    focusable: false,
-    zIndex: -1,
-    style: {
-      width: SWIMLANE_LANE_WIDTH,
-      height: laneHeight,
-    },
-  }));
+  lanes.forEach((lane, index) => {
+    const laneNodes = flow.nodes.filter((node) => node.laneId === lane.id && node.position);
+    const fallbackX = SWIMLANE_PADDING_X + index * (SWIMLANE_LANE_WIDTH + SWIMLANE_LANE_GAP);
+
+    if (!laneNodes.length) {
+      laneBounds.set(lane.id, { x: fallbackX, width: SWIMLANE_LANE_WIDTH });
+      return;
+    }
+
+    const minNodeX = Math.min(...laneNodes.map((node) => node.position!.x));
+    const maxNodeX = Math.max(...laneNodes.map((node) => node.position!.x + SWIMLANE_NODE_WIDTH));
+    const x = minNodeX - SWIMLANE_LANE_INSET_X;
+    const width = Math.max(SWIMLANE_LANE_WIDTH, maxNodeX - minNodeX + SWIMLANE_LANE_INSET_X * 2);
+    laneBounds.set(lane.id, { x, width });
+  });
+
+  const laneBands: Node<LaneBandNodeData>[] = lanes.map((lane) => {
+    const bounds = laneBounds.get(lane.id) ?? { x: SWIMLANE_PADDING_X, width: SWIMLANE_LANE_WIDTH };
+
+    return {
+      id: `lane-band-${lane.id}`,
+      type: "laneBand",
+      position: {
+        x: bounds.x,
+        y: SWIMLANE_PADDING_Y,
+      },
+      data: {
+        label: lane.label,
+        color: lane.color,
+      },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      zIndex: -1,
+      style: {
+        width: bounds.width,
+        height: laneHeight,
+      },
+    };
+  });
 
   const stepNodes: Node<BusinessNodeData>[] = flow.nodes.map((node) => {
     const lane = flow.lanes.find((item) => item.id === node.laneId);
@@ -306,7 +329,6 @@ export function autoLayout(flow: FlowDefinition, layoutMode: LayoutMode = "topDo
 
 export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
   const lanes = sortedLanes(flow);
-  const laneIndex = new Map(lanes.map((lane, index) => [lane.id, index]));
   const nodeById = new Map(flow.nodes.map((node) => [node.id, node]));
   const validEdges = flow.edges
     .filter((edge) => edge.to && nodeById.has(edge.from) && nodeById.has(edge.to))
@@ -325,34 +347,47 @@ export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
   });
 
   const rowById = new Map<string, number>();
-  const laneRowUse = new Map<string, Set<number>>();
+  const columnById = new Map<string, number>();
+  const laneSlotUse = new Map<string, Set<number>>();
+  const laneColumnCounts = new Map<string, number>();
 
-  function reserveRow(laneId: string, preferredRow: number): number {
-    const used = laneRowUse.get(laneId) ?? new Set<number>();
+  function reserveSlot(laneId: string, preferredRow: number, preferredColumn: number): { row: number; column: number } {
     let row = Math.max(0, preferredRow);
-    while (used.has(row)) row += 1;
-    used.add(row);
-    laneRowUse.set(laneId, used);
-    return row;
+    let column = Math.max(0, preferredColumn);
+    let key = `${laneId}:${row}`;
+    let used = laneSlotUse.get(key) ?? new Set<number>();
+
+    while (used.has(column)) {
+      column += 1;
+    }
+
+    used.add(column);
+    laneSlotUse.set(key, used);
+    laneColumnCounts.set(laneId, Math.max(laneColumnCounts.get(laneId) ?? 1, column + 1));
+
+    return { row, column };
   }
 
-  function assignRow(nodeId: string, preferredRow: number) {
+  function assignSlot(nodeId: string, preferredRow: number, preferredColumn = 0) {
     const node = nodeById.get(nodeId);
     if (!node) return;
     if (rowById.has(nodeId)) {
       const current = rowById.get(nodeId)!;
+      const currentColumn = columnById.get(nodeId) ?? 0;
       if (preferredRow <= current) return;
 
-      const used = laneRowUse.get(node.laneId);
-      used?.delete(current);
+      const used = laneSlotUse.get(`${node.laneId}:${current}`);
+      used?.delete(currentColumn);
     }
 
-    rowById.set(nodeId, reserveRow(node.laneId, preferredRow));
+    const slot = reserveSlot(node.laneId, preferredRow, preferredColumn);
+    rowById.set(nodeId, slot.row);
+    columnById.set(nodeId, slot.column);
   }
 
   const startNodes = flow.nodes.filter((node) => (incoming.get(node.id)?.length ?? 0) === 0);
   const orderedStarts = startNodes.length ? startNodes : flow.nodes.slice(0, 1);
-  orderedStarts.forEach((node, index) => assignRow(node.id, index));
+  orderedStarts.forEach((node, index) => assignSlot(node.id, index));
 
   const queue = orderedStarts.map((node) => node.id);
   const visits = new Map<string, number>();
@@ -365,6 +400,9 @@ export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
     const sourceRow = rowById.get(sourceId) ?? 0;
     const edges = outgoing.get(sourceId) ?? [];
     const isBranch = edges.length > 1;
+    const sameLaneBranchTargets = edges
+      .map((edge) => edge.to)
+      .filter((targetId) => nodeById.get(targetId)?.laneId === sourceNode.laneId);
 
     edges.forEach((edge, edgeIndex) => {
       const targetNode = nodeById.get(edge.to);
@@ -372,19 +410,23 @@ export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
 
       const targetAlreadyAssigned = rowById.has(targetNode.id);
       const sameLane = sourceNode.laneId === targetNode.laneId;
-      const sourceLaneOrder = laneIndex.get(sourceNode.laneId) ?? 0;
-      const targetLaneOrder = laneIndex.get(targetNode.laneId) ?? 0;
+      const sourceLaneOrder = lanes.findIndex((lane) => lane.id === sourceNode.laneId);
+      const targetLaneOrder = lanes.findIndex((lane) => lane.id === targetNode.laneId);
       const backward = targetLaneOrder < sourceLaneOrder;
+      const sameLaneBranchColumn = sameLaneBranchTargets.indexOf(targetNode.id);
       const preferredRow = isBranch
-        ? sourceRow + 1 + edgeIndex
+        ? sameLane && sameLaneBranchTargets.length > 1
+          ? sourceRow + 1
+          : sourceRow + 1 + edgeIndex
         : sameLane
           ? sourceRow + 1
           : backward
             ? sourceRow + 0.5
           : Math.max(sourceRow, (incoming.get(targetNode.id)?.length ?? 0) > 1 ? sourceRow + 1 : sourceRow);
+      const preferredColumn = sameLane && sameLaneBranchTargets.length > 1 && sameLaneBranchColumn >= 0 ? sameLaneBranchColumn : 0;
 
       if (!targetAlreadyAssigned || preferredRow > (rowById.get(targetNode.id) ?? 0)) {
-        assignRow(targetNode.id, preferredRow);
+        assignSlot(targetNode.id, preferredRow, preferredColumn);
       }
 
       const nextVisits = (visits.get(targetNode.id) ?? 0) + 1;
@@ -395,20 +437,30 @@ export function autoLayoutSwimlane(flow: FlowDefinition): FlowDefinition {
 
   flow.nodes.forEach((node, index) => {
     if (!rowById.has(node.id)) {
-      assignRow(node.id, index);
+      assignSlot(node.id, index);
     }
+  });
+
+  const laneStartX = new Map<string, number>();
+  let currentLaneX = SWIMLANE_PADDING_X;
+  lanes.forEach((lane) => {
+    const columns = laneColumnCounts.get(lane.id) ?? 1;
+    const laneWidth = Math.max(SWIMLANE_LANE_WIDTH, SWIMLANE_LANE_INSET_X * 2 + columns * SWIMLANE_NODE_WIDTH + (columns - 1) * SWIMLANE_COLUMN_GAP);
+    laneStartX.set(lane.id, currentLaneX);
+    currentLaneX += laneWidth + SWIMLANE_LANE_GAP;
   });
 
   return {
     ...flow,
     nodes: flow.nodes.map((node) => {
-      const lanePos = laneIndex.get(node.laneId) ?? 0;
+      const laneX = laneStartX.get(node.laneId) ?? SWIMLANE_PADDING_X;
       const row = rowById.get(node.id) ?? 0;
+      const column = columnById.get(node.id) ?? 0;
 
       return {
         ...node,
         position: {
-          x: SWIMLANE_PADDING_X + lanePos * (SWIMLANE_LANE_WIDTH + SWIMLANE_LANE_GAP) + (SWIMLANE_LANE_WIDTH - SWIMLANE_NODE_WIDTH) / 2,
+          x: laneX + SWIMLANE_LANE_INSET_X + column * (SWIMLANE_NODE_WIDTH + SWIMLANE_COLUMN_GAP),
           y: SWIMLANE_PADDING_Y + SWIMLANE_HEADER_HEIGHT + SWIMLANE_CHIP_SPACE + row * SWIMLANE_ROW_HEIGHT,
         },
       };
