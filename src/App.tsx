@@ -5,6 +5,7 @@ import { toPng, toSvg } from "html-to-image";
 import { ChevronDown, ChevronRight, ChevronUp, Copy, Download, FileUp, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import BusinessNode from "./BusinessNode";
 import LaneBandNode from "./LaneBandNode";
+import SwimlaneEdge from "./SwimlaneEdge";
 import {
   FlowDefinition,
   FlowEdge,
@@ -26,6 +27,7 @@ import {
 
 const storageKey = "business-flow-definition";
 const nodeTypes = { businessNode: BusinessNode, laneBand: LaneBandNode };
+const edgeTypes = { swimlaneEdge: SwimlaneEdge };
 const stepTypes: Array<NonNullable<StepNode["type"]>> = ["system", "app", "process", "screen", "data"];
 const flowTypes: Array<NonNullable<FlowEdge["flowType"]>> = ["process", "document", "status", "reference"];
 const laneColorPalette = [
@@ -537,6 +539,7 @@ function FlowModeler() {
           nodes={exportMode ? rfNodes.map((node) => ({ ...node, selected: false })) : rfNodes}
           edges={rfEdges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={(_, node) => {

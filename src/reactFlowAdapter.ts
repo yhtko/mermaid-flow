@@ -23,7 +23,7 @@ export const SWIMLANE_NODE_WIDTH = 210;
 export const SWIMLANE_NODE_HEIGHT = 90;
 export const SWIMLANE_LANE_WIDTH = 270;
 export const SWIMLANE_LANE_GAP = 24;
-export const SWIMLANE_ROW_HEIGHT = 145;
+export const SWIMLANE_ROW_HEIGHT = 172;
 export const SWIMLANE_HEADER_HEIGHT = 62;
 export const SWIMLANE_PADDING_X = 50;
 export const SWIMLANE_PADDING_Y = 52;
@@ -133,6 +133,7 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
     const isSwimlane = layoutMode === "swimlane";
     const sourceHandle = isSwimlane ? (sameLane ? "bottom" : targetLaneOrder >= sourceLaneOrder ? "right" : "left") : flow.direction === "LR" ? "right" : "bottom";
     const targetHandle = isSwimlane ? (sameLane ? "top" : targetLaneOrder >= sourceLaneOrder ? "left" : "right") : flow.direction === "LR" ? "left" : "top";
+    const displayLabel = isSwimlane && label && label.length > 26 ? `${label.slice(0, 25).trimEnd()}...` : label;
 
     return {
       id: edgeId(edge, index),
@@ -140,9 +141,9 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
       target: edge.to,
       sourceHandle,
       targetHandle,
-      label,
+      label: displayLabel,
       animated: false,
-      type: "smoothstep",
+      type: isSwimlane ? "swimlaneEdge" : "smoothstep",
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 18,
@@ -160,6 +161,8 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
       },
       data: {
         flowType: edge.flowType ?? "process",
+        fullLabel: label,
+        labelPlacement: sameLane ? "vertical" : "horizontal",
       },
     };
   });
