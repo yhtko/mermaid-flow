@@ -97,18 +97,57 @@ export function autoLayout(flow: FlowDefinition): FlowDefinition {
 
   dagre.layout(graph);
 
+  const positioned = new Map<string, { x: number; y: number }>();
+  flow.nodes.forEach((node) => {
+    const dagreNode = graph.node(node.id);
+    if (!dagreNode) return;
+    positioned.set(node.id, {
+      x: dagreNode.x - NODE_WIDTH / 2,
+      y: dagreNode.y - NODE_HEIGHT / 2,
+    });
+  });
+
+  // Re-sort siblings by sortOrder so the first next-step ends up
+  // leftmost (TD) or topmost (LR) instead of dagre's arbitrary order.
+  const horizontal = flow.direction === "LR";
+  const sortedOutgoing = new Map<string, string[]>();
+  flow.nodes.forEach((node) => {
+    const children = flow.edges
+      .filter((e) => e.from === node.id && e.to)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((e) => e.to);
+    if (children.length > 1) sortedOutgoing.set(node.id, children);
+  });
+
+  sortedOutgoing.forEach((children) => {
+    const positions = children
+      .map((id) => positioned.get(id))
+      .filter(Boolean) as { x: number; y: number }[];
+    if (positions.length < 2) return;
+
+    if (horizontal) {
+      // LR: sort siblings top-to-bottom by sortOrder
+      const ys = [...positions.map((p) => p.y)].sort((a, b) => a - b);
+      children.forEach((id, i) => {
+        const pos = positioned.get(id);
+        if (pos) positioned.set(id, { ...pos, y: ys[i] });
+      });
+    } else {
+      // TD: sort siblings left-to-right by sortOrder
+      const xs = [...positions.map((p) => p.x)].sort((a, b) => a - b);
+      children.forEach((id, i) => {
+        const pos = positioned.get(id);
+        if (pos) positioned.set(id, { ...pos, x: xs[i] });
+      });
+    }
+  });
+
   return {
     ...flow,
     nodes: flow.nodes.map((node) => {
-      const dagreNode = graph.node(node.id);
-      if (!dagreNode) return node;
-      return {
-        ...node,
-        position: {
-          x: dagreNode.x - NODE_WIDTH / 2,
-          y: dagreNode.y - NODE_HEIGHT / 2,
-        },
-      };
+      const pos = positioned.get(node.id);
+      if (!pos) return node;
+      return { ...node, position: pos };
     }),
   };
 }
