@@ -313,6 +313,31 @@ pre {
   border: 1px solid #c9d6e3;
   border-radius: 8px;
   overflow: hidden;
+  position: relative;
+}
+
+.lane-block.dragging {
+  opacity: 0.48;
+}
+
+.lane-block.drop-target::before,
+.lane-block.drop-target::after {
+  background: #2563eb;
+  border-radius: 999px;
+  content: "";
+  height: 3px;
+  left: 8px;
+  position: absolute;
+  right: 8px;
+  z-index: 4;
+}
+
+.lane-block.drop-before::before {
+  top: -2px;
+}
+
+.lane-block.drop-after::after {
+  bottom: -2px;
 }
 
 .lane-header {

@@ -216,6 +216,32 @@ function FlowModeler() {
     if (patch.id) setSelectedItem({ type: "lane", id: patch.id });
   }
 
+  function reorderLane(draggedId: string, targetId: string, placement: "before" | "after") {
+    if (draggedId === targetId) return;
+
+    updateFlow((current) => {
+      const ordered = [...current.lanes].sort((a, b) => a.sortOrder - b.sortOrder);
+      const draggedIndex = ordered.findIndex((lane) => lane.id === draggedId);
+      const targetIndex = ordered.findIndex((lane) => lane.id === targetId);
+      if (draggedIndex < 0 || targetIndex < 0) return current;
+
+      const [draggedLane] = ordered.splice(draggedIndex, 1);
+      const targetIndexAfterRemoval = ordered.findIndex((lane) => lane.id === targetId);
+      const insertIndex = placement === "after" ? targetIndexAfterRemoval + 1 : targetIndexAfterRemoval;
+      ordered.splice(insertIndex, 0, draggedLane);
+      const sortOrderById = new Map(ordered.map((lane, index) => [lane.id, (index + 1) * 10]));
+
+      return {
+        ...current,
+        lanes: current.lanes.map((lane) => ({
+          ...lane,
+          sortOrder: sortOrderById.get(lane.id) ?? lane.sortOrder,
+        })),
+      };
+    }, true);
+    setSelectedItem({ type: "lane", id: draggedId });
+  }
+
   function updateStep(id: string, patch: Partial<StepNode>) {
     updateFlow((current) => {
       const nextId = patch.id ?? id;
@@ -518,6 +544,7 @@ function FlowModeler() {
           selectedItem={selectedItem}
           onSelect={setSelectedItem}
           onAddStep={addStep}
+          onReorderLane={reorderLane}
         />
         <ManualSectionList
           sections={flow.manualSections ?? []}
@@ -621,16 +648,21 @@ function LaneTree({
   selectedItem,
   onSelect,
   onAddStep,
+  onReorderLane,
 }: {
   flow: FlowDefinition;
   sortedLanes: Lane[];
   selectedItem: Selection;
   onSelect: (selection: Selection) => void;
   onAddStep: (laneId: string) => void;
+  onReorderLane: (draggedId: string, targetId: string, placement: "before" | "after") => void;
 }) {
   const [collapsedLaneIds, setCollapsedLaneIds] = useState<Set<string>>(
     () => new Set(sortedLanes.map((lane) => lane.id)),
   );
+  const [draggedLaneId, setDraggedLaneId] = useState("");
+  const [dragOverLaneId, setDragOverLaneId] = useState("");
+  const [dragOverPlacement, setDragOverPlacement] = useState<"before" | "after">("before");
 
   function toggleLane(id: string) {
     setCollapsedLaneIds((current) => {
@@ -653,8 +685,46 @@ function LaneTree({
       {sortedLanes.map((lane) => {
         const laneSteps = flow.nodes.filter((node) => node.laneId === lane.id);
         const collapsed = collapsedLaneIds.has(lane.id);
+        const dragging = draggedLaneId === lane.id;
+        const dropTarget = Boolean(draggedLaneId && dragOverLaneId === lane.id && draggedLaneId !== lane.id);
         return (
-          <div className={`lane-block ${collapsed ? "collapsed" : ""}`} key={lane.id}>
+          <div
+            className={`lane-block ${collapsed ? "collapsed" : ""} ${dragging ? "dragging" : ""} ${dropTarget ? `drop-target drop-${dragOverPlacement}` : ""}`}
+            draggable
+            key={lane.id}
+            onDragStart={(event) => {
+              if (event.target instanceof HTMLElement && event.target.closest(".lane-step-list")) {
+                event.preventDefault();
+                return;
+              }
+
+              setDraggedLaneId(lane.id);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", lane.id);
+            }}
+            onDragEnd={() => {
+              setDraggedLaneId("");
+              setDragOverLaneId("");
+              setDragOverPlacement("before");
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              const rect = event.currentTarget.getBoundingClientRect();
+              setDragOverLaneId(lane.id);
+              setDragOverPlacement(event.clientY > rect.top + rect.height / 2 ? "after" : "before");
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const droppedLaneId = event.dataTransfer.getData("text/plain") || draggedLaneId;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const placement = event.clientY > rect.top + rect.height / 2 ? "after" : "before";
+              setDraggedLaneId("");
+              setDragOverLaneId("");
+              setDragOverPlacement("before");
+              onReorderLane(droppedLaneId, lane.id, placement);
+            }}
+          >
             <div className="lane-header">
               <button className="lane-toggle" type="button" onClick={() => toggleLane(lane.id)} aria-label={collapsed ? "Expand lane" : "Collapse lane"}>
                 {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
