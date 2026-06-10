@@ -551,6 +551,7 @@ function FlowModeler() {
           onCopy={copyGeneratedText}
           onExportMarkdown={exportMarkdown}
           onExportPng={() => exportImage("png")}
+          onUpdateOverview={(overview) => updateFlow((current) => ({ ...current, overview }))}
         />
       )}
       {toast && <div className="toast">{toast}</div>}
@@ -797,13 +798,6 @@ function PropertyEditor({
                     </option>
                   ))}
               </select>
-              <select value={edge.flowType ?? "process"} onChange={(event) => onUpdateEdge(id, { flowType: event.target.value as FlowEdge["flowType"] })}>
-                {flowTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
               <input value={edge.documentName ?? edge.label ?? ""} placeholder="data / label" onChange={(event) => onUpdateEdge(id, { documentName: event.target.value })} />
               <button type="button" onClick={() => onSelect({ type: "edge", id })}>
                 Select
@@ -848,15 +842,7 @@ function PropertyEditor({
         <Field label="label">
           <input value={edge.label ?? ""} onChange={(event) => onUpdateEdge(selectedItem.id, { label: event.target.value })} />
         </Field>
-        <Field label="connection type">
-          <select value={edge.flowType ?? "process"} onChange={(event) => onUpdateEdge(selectedItem.id, { flowType: event.target.value as FlowEdge["flowType"] })}>
-            {flowTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </Field>
+
         <Field label="document / data name">
           <input value={edge.documentName ?? ""} onChange={(event) => onUpdateEdge(selectedItem.id, { documentName: event.target.value })} />
         </Field>
@@ -988,6 +974,7 @@ function ExportPanel({
   onCopy,
   onExportMarkdown,
   onExportPng,
+  onUpdateOverview,
 }: {
   flow: FlowDefinition;
   manualSection: string;
@@ -995,6 +982,7 @@ function ExportPanel({
   onCopy: (text: string) => void;
   onExportMarkdown: () => void;
   onExportPng: () => void;
+  onUpdateOverview: (overview: string) => void;
 }) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -1017,13 +1005,14 @@ function ExportPanel({
             <Download size={16} /> Export PNG
           </button>
         </div>
-        <ManualDocumentPreview flow={flow} />
+        <ManualDocumentPreview flow={flow} onUpdateOverview={onUpdateOverview} />
       </section>
     </div>
   );
 }
 
-function ManualDocumentPreview({ flow }: { flow: FlowDefinition }) {
+function ManualDocumentPreview({ flow, onUpdateOverview }: { flow: FlowDefinition; onUpdateOverview: (overview: string) => void }) {
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const sections = [...(flow.manualSections ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   const sectionList = sections.length
     ? sections
@@ -1033,9 +1022,19 @@ function ManualDocumentPreview({ flow }: { flow: FlowDefinition }) {
   return (
     <article className="manual-preview" aria-label="Manual Preview">
       <h1>{flow.title}</h1>
-      <section>
-        <h2>Overview</h2>
-        <p>This document summarizes the main manufacturing flow based on the current flow diagram.</p>
+      <section className="manual-preview-section">
+        <button className="advanced-export-toggle" type="button" onClick={() => setOverviewOpen((o) => !o)}>
+          {overviewOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <h2>Overview</h2>
+        </button>
+        {overviewOpen && (
+          <textarea
+            className="overview-input"
+            value={flow.overview ?? ""}
+            placeholder="Describe the overall flow..."
+            onChange={(event) => onUpdateOverview(event.target.value)}
+          />
+        )}
       </section>
       <section>
         <h2>Manual Sections</h2>

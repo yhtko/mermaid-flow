@@ -39,6 +39,7 @@ export type FlowDefinition = {
   nodes: StepNode[];
   edges: FlowEdge[];
   manualSections?: ManualSection[];
+  overview?: string;
 };
 
 export type ValidationResult = {

@@ -121,7 +121,7 @@ export function generateManualSection(flow: FlowDefinition): string {
     "",
     "## Overview",
     "",
-    "This document summarizes the main manufacturing flow based on the current flow diagram.",
+    flow.overview?.trim() || "This document summarizes the main manufacturing flow based on the current flow diagram.",
     "",
     "## Manual Sections",
     "",
