@@ -387,10 +387,19 @@ function FlowModeler() {
       return;
     }
 
+    const nodes = reactFlow.getNodes();
+    const padding = 40;
+    const minX = Math.min(...nodes.map((n) => n.position.x)) - padding;
+    const minY = Math.min(...nodes.map((n) => n.position.y)) - padding;
+    const maxX = Math.max(...nodes.map((n) => n.position.x + (n.measured?.width ?? 200))) + padding;
+    const maxY = Math.max(...nodes.map((n) => n.position.y + (n.measured?.height ?? 80))) + padding;
+    const width = maxX - minX;
+    const height = maxY - minY;
+
     const dataUrl =
       kind === "png"
-        ? await toPng(element, { backgroundColor: "#ffffff", pixelRatio: 2 })
-        : await toSvg(element, { backgroundColor: "#ffffff" });
+        ? await toPng(element, { backgroundColor: "#ffffff", pixelRatio: 2, width, height, style: { transform: `translate(${-minX}px, ${-minY}px)` } })
+        : await toSvg(element, { backgroundColor: "#ffffff", width, height, style: { transform: `translate(${-minX}px, ${-minY}px)` } });
     const link = document.createElement("a");
     link.href = dataUrl;
     link.download = safeFileName(flow.title, kind);
