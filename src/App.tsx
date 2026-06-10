@@ -690,6 +690,24 @@ function ManualSectionList({
   );
 }
 
+function StepIdInput({ nodeId, onUpdate }: { nodeId: string; onUpdate: (id: string) => void }) {
+  const [draft, setDraft] = useState(nodeId);
+  useEffect(() => { setDraft(nodeId); }, [nodeId]);
+  return (
+    <input
+      value={draft}
+      onChange={(event) => {
+        const val = event.target.value;
+        setDraft(val);
+        if (val.trim()) onUpdate(val);
+      }}
+      onBlur={() => {
+        if (!draft.trim()) setDraft(nodeId);
+      }}
+    />
+  );
+}
+
 function PropertyEditor({
   flow,
   validation,
@@ -765,7 +783,7 @@ function PropertyEditor({
       <section className="editor-section">
         <EditorHeader title="Step" onDelete={() => onDeleteStep(node.id)} />
         <Field label="id">
-          <input value={node.id} onChange={(event) => onUpdateStep(node.id, { id: event.target.value })} />
+          <StepIdInput nodeId={node.id} onUpdate={(newId) => onUpdateStep(node.id, { id: newId })} />
         </Field>
         <Field label="label">
           <textarea value={node.label} onChange={(event) => onUpdateStep(node.id, { label: event.target.value })} />
