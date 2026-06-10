@@ -249,6 +249,16 @@ pre {
   display: none;
 }
 
+.input-error {
+  border-color: #e5a19b !important;
+  outline-color: #e5a19b !important;
+}
+
+.field-error {
+  color: #c0392b;
+  font-size: 11px;
+}
+
 .inline-error {
   background: #fff1f0;
   border: 1px solid #e5a19b;

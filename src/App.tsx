@@ -690,21 +690,26 @@ function ManualSectionList({
   );
 }
 
-function StepIdInput({ nodeId, onUpdate }: { nodeId: string; onUpdate: (id: string) => void }) {
+function StepIdInput({ nodeId, existingIds, onUpdate }: { nodeId: string; existingIds: string[]; onUpdate: (id: string) => void }) {
   const [draft, setDraft] = useState(nodeId);
   useEffect(() => { setDraft(nodeId); }, [nodeId]);
+  const isDuplicate = draft.trim() !== nodeId && existingIds.includes(draft.trim());
   return (
-    <input
-      value={draft}
-      onChange={(event) => {
-        const val = event.target.value;
-        setDraft(val);
-        if (val.trim()) onUpdate(val);
-      }}
-      onBlur={() => {
-        if (!draft.trim()) setDraft(nodeId);
-      }}
-    />
+    <>
+      <input
+        value={draft}
+        className={isDuplicate ? "input-error" : undefined}
+        onChange={(event) => {
+          const val = event.target.value;
+          setDraft(val);
+          if (val.trim() && !existingIds.includes(val.trim())) onUpdate(val);
+        }}
+        onBlur={() => {
+          if (!draft.trim() || isDuplicate) setDraft(nodeId);
+        }}
+      />
+      {isDuplicate && <span className="field-error">ID already exists</span>}
+    </>
   );
 }
 
@@ -783,7 +788,7 @@ function PropertyEditor({
       <section className="editor-section">
         <EditorHeader title="Step" onDelete={() => onDeleteStep(node.id)} />
         <Field label="id">
-          <StepIdInput nodeId={node.id} onUpdate={(newId) => onUpdateStep(node.id, { id: newId })} />
+          <StepIdInput nodeId={node.id} existingIds={flow.nodes.map((n) => n.id)} onUpdate={(newId) => onUpdateStep(node.id, { id: newId })} />
         </Field>
         <Field label="label">
           <textarea value={node.label} onChange={(event) => onUpdateStep(node.id, { label: event.target.value })} />
