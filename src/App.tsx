@@ -240,16 +240,19 @@ function FlowModeler() {
       .map((edge, index) => ({ edge, id: edgeId(edge, index) }))
       .filter(({ edge }) => edge.from === from)
       .sort((a, b) => (a.edge.sortOrder ?? 0) - (b.edge.sortOrder ?? 0));
-    const idx = outgoing.findIndex(({ id }) => id === edgeIdVal);
+    // Normalize sortOrders to guaranteed-unique values (10, 20, 30…)
+    const normalized = outgoing.map((item, i) => ({ ...item, order: (i + 1) * 10 }));
+    const idx = normalized.findIndex(({ id }) => id === edgeIdVal);
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= outgoing.length) return;
-    const orders = outgoing.map(({ edge }) => edge.sortOrder ?? 0);
+    if (swapIdx < 0 || swapIdx >= normalized.length) return;
+    const orderA = normalized[idx].order;
+    const orderB = normalized[swapIdx].order;
     updateFlow((current) => ({
       ...current,
       edges: current.edges.map((edge, index) => {
         const eid = edgeId(edge, index);
-        if (eid === outgoing[idx].id) return { ...edge, sortOrder: orders[swapIdx] };
-        if (eid === outgoing[swapIdx].id) return { ...edge, sortOrder: orders[idx] };
+        if (eid === normalized[idx].id) return { ...edge, sortOrder: orderB };
+        if (eid === normalized[swapIdx].id) return { ...edge, sortOrder: orderA };
         return edge;
       }),
     }));
@@ -864,11 +867,6 @@ function PropertyEditor({
                       {item.id} - {item.label.replace(/\n/g, " / ")}
                     </option>
                   ))}
-              </select>
-              <select value={edge.branch ?? ""} onChange={(event) => onUpdateEdge(id, { branch: (event.target.value || undefined) as FlowEdge["branch"] })}>
-                <option value="">— direction —</option>
-                <option value="left">Left</option>
-                <option value="right">Right</option>
               </select>
               <input value={edge.documentName ?? edge.label ?? ""} placeholder="label" onChange={(event) => onUpdateEdge(id, { documentName: event.target.value })} />
               <button type="button" onClick={() => onSelect({ type: "edge", id })}>

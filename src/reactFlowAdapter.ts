@@ -42,7 +42,7 @@ export function toReactFlowNodes(flow: FlowDefinition): Node<BusinessNodeData>[]
 }
 
 export function toReactFlowEdges(flow: FlowDefinition): Edge[] {
-  return flow.edges.filter((edge) => (edge.flowType ?? "process") === "process").map((edge, index) => {
+  return flow.edges.filter((edge) => edge.to && (edge.flowType ?? "process") === "process").map((edge, index) => {
     const visual = edgeVisuals[edge.flowType ?? "process"];
     const label = edge.documentName || edge.label;
     return {
@@ -91,7 +91,7 @@ export function autoLayout(flow: FlowDefinition): FlowDefinition {
     graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   });
 
-  flow.edges.forEach((edge) => {
+  flow.edges.filter((edge) => edge.to).forEach((edge) => {
     graph.setEdge(edge.from, edge.to);
   });
 
