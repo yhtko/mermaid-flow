@@ -17,7 +17,9 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
     <div className={`business-node ${selected ? "selected" : ""}`} style={{ "--lane-color": color } as React.CSSProperties}>
       <Handle id="top" type="target" position={Position.Top} />
       <Handle id="left" type="target" position={Position.Left} />
+      <Handle id="left-lower" type="target" position={Position.Left} style={{ top: "66%" }} />
       <Handle id="right" type="target" position={Position.Right} />
+      <Handle id="right-upper" type="target" position={Position.Right} style={{ top: "36%" }} />
       <Handle id="bottom" type="target" position={Position.Bottom} />
       <Handle id={targetPosition === Position.Bottom ? "legacy-bottom-target" : "legacy-left-target"} type="target" position={targetPosition ?? Position.Left} />
       <div className="business-node-lane">{nodeData.laneLabel}</div>
@@ -25,7 +27,9 @@ function BusinessNode({ data, selected, sourcePosition, targetPosition }: NodePr
       <div className="business-node-type">{nodeData.nodeType ?? "process"}</div>
       <Handle id="top" type="source" position={Position.Top} />
       <Handle id="left" type="source" position={Position.Left} />
+      <Handle id="left-lower" type="source" position={Position.Left} style={{ top: "66%" }} />
       <Handle id="right" type="source" position={Position.Right} />
+      <Handle id="right-lower" type="source" position={Position.Right} style={{ top: "66%" }} />
       <Handle id="bottom" type="source" position={Position.Bottom} />
       <Handle id={sourcePosition === Position.Bottom ? "legacy-bottom-source" : "legacy-right-source"} type="source" position={sourcePosition ?? Position.Right} />
     </div>
