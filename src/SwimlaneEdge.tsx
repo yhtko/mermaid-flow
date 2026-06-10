@@ -1,8 +1,33 @@
 import {
   BaseEdge,
   EdgeProps,
-  getSmoothStepPath,
+  Position,
 } from "@xyflow/react";
+
+function orthogonalPath(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  sourcePosition: Position,
+  targetPosition: Position,
+) {
+  if (Math.abs(sourceX - targetX) < 2) {
+    return `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+  }
+
+  if (Math.abs(sourceY - targetY) < 2) {
+    return `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+  }
+
+  if (sourcePosition === Position.Bottom || sourcePosition === Position.Top || targetPosition === Position.Top || targetPosition === Position.Bottom) {
+    const midY = sourceY + (targetY - sourceY) / 2;
+    return `M ${sourceX},${sourceY} L ${sourceX},${midY} L ${targetX},${midY} L ${targetX},${targetY}`;
+  }
+
+  const midX = sourceX + (targetX - sourceX) / 2;
+  return `M ${sourceX},${sourceY} L ${midX},${sourceY} L ${midX},${targetY} L ${targetX},${targetY}`;
+}
 
 function SwimlaneEdge({
   id,
@@ -15,18 +40,15 @@ function SwimlaneEdge({
   markerEnd,
   style,
   selected,
-  pathOptions,
 }: EdgeProps) {
-  const [edgePath] = getSmoothStepPath({
+  const edgePath = orthogonalPath(
     sourceX,
     sourceY,
-    sourcePosition,
     targetX,
     targetY,
+    sourcePosition,
     targetPosition,
-    borderRadius: pathOptions?.borderRadius,
-    offset: pathOptions?.offset,
-  });
+  );
 
   return (
     <BaseEdge

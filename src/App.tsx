@@ -58,11 +58,12 @@ type Selection =
 type ViewMode = "full" | "step";
 
 function cloneInitialFlow(): FlowDefinition {
-  return autoLayout(normalizeFlow(JSON.parse(JSON.stringify(initialFlow)) as FlowDefinition));
+  const normalized = normalizeFlow(JSON.parse(JSON.stringify(initialFlow)) as FlowDefinition);
+  return autoLayout(normalized, normalized.direction === "LR" ? "leftRight" : "topDown");
 }
 
 function ensurePositions(flow: FlowDefinition): FlowDefinition {
-  return autoLayout(flow);
+  return autoLayout(flow, flow.direction === "LR" ? "leftRight" : "topDown");
 }
 
 function loadFlow(): FlowDefinition {
@@ -94,7 +95,7 @@ function FlowModeler() {
   const [toast, setToast] = useState("");
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [viewMode, setViewMode] = useState<ViewMode>("full");
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("topDown");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => (flow.direction === "LR" ? "leftRight" : "topDown"));
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const reactFlow = useReactFlow();
 
@@ -473,26 +474,31 @@ function FlowModeler() {
   return (
     <main className="modeler-shell">
       <header className="admin-toolbar">
-        <div className="view-mode-group" aria-label="Canvas view mode">
-          <span>View</span>
-          <button type="button" className={viewMode === "full" ? "active" : ""} onClick={() => setViewMode("full")}>
-            Full
-          </button>
-          <button type="button" className={viewMode === "step" ? "active" : ""} onClick={() => setViewMode("step")}>
-            Step Focus
-          </button>
-        </div>
-        <div className="view-mode-group" aria-label="Layout mode">
-          <span>Layout</span>
-          <button type="button" className={layoutMode === "topDown" ? "active" : ""} onClick={() => changeLayoutMode("topDown")}>
-            Top Down
-          </button>
-          <button type="button" className={layoutMode === "swimlane" ? "active" : ""} onClick={() => changeLayoutMode("swimlane")}>
-            Swimlane
-          </button>
+        <div className="toolbar-left">
+          <div className="admin-toolbar-title">Flow Management</div>
+          <div className="view-mode-group" aria-label="Layout mode">
+            <span>Layout</span>
+            <button type="button" className={layoutMode === "leftRight" ? "active" : ""} onClick={() => changeLayoutMode("leftRight")}>
+              Left to Right
+            </button>
+            <button type="button" className={layoutMode === "topDown" ? "active" : ""} onClick={() => changeLayoutMode("topDown")}>
+              Top Down
+            </button>
+            <button type="button" className={layoutMode === "swimlane" ? "active" : ""} onClick={() => changeLayoutMode("swimlane")}>
+              Swimlane
+            </button>
+          </div>
+          <div className="view-mode-group" aria-label="Canvas view mode">
+            <span>View</span>
+            <button type="button" className={viewMode === "full" ? "active" : ""} onClick={() => setViewMode("full")}>
+              Full
+            </button>
+            <button type="button" className={viewMode === "step" ? "active" : ""} onClick={() => setViewMode("step")}>
+              Step Focus
+            </button>
+          </div>
         </div>
         <div className="admin-actions">
-          <div className="admin-toolbar-title">Flow Management</div>
           <button type="button" onClick={() => setExportOpen(true)}>
             <Download size={15} /> Export Manual
           </button>
@@ -513,18 +519,6 @@ function FlowModeler() {
             onChange={(event) => updateFlow((current) => ({ ...current, title: event.target.value }))}
             aria-label="Flow title"
           />
-          <select
-            value={flow.direction}
-            onChange={(event) =>
-              updateFlow(
-                (current) => ({ ...current, direction: event.target.value as FlowDefinition["direction"] }),
-                true,
-              )
-            }
-          >
-            <option value="LR">Left to Right</option>
-            <option value="TD">Top Down</option>
-          </select>
         </div>
 
         <div className="action-grid">

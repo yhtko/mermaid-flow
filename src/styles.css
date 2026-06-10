@@ -95,8 +95,8 @@ pre {
   color: #536273;
   font-size: 12px;
   font-weight: 700;
-  margin-right: 8px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .admin-toolbar button {
@@ -104,11 +104,20 @@ pre {
 }
 
 .admin-actions,
+.toolbar-left,
 .view-mode-group {
   align-items: center;
   display: flex;
   gap: 8px;
   min-width: 0;
+}
+
+.toolbar-left {
+  flex: 1;
+}
+
+.admin-actions {
+  justify-content: flex-end;
 }
 
 .view-mode-group {

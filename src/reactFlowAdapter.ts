@@ -20,7 +20,7 @@ export type LaneBandNodeData = {
   color?: string;
 };
 
-export type LayoutMode = "topDown" | "swimlane";
+export type LayoutMode = "leftRight" | "topDown" | "swimlane";
 
 export const NODE_WIDTH = 180;
 export const NODE_HEIGHT = 82;
@@ -52,7 +52,7 @@ export function toReactFlowNodes(flow: FlowDefinition, layoutMode: LayoutMode = 
     return toSwimlaneReactFlowNodes(flow);
   }
 
-  const horizontal = flow.direction === "LR";
+  const horizontal = layoutMode === "leftRight";
   return flow.nodes.map((node) => {
     const lane = flow.lanes.find((item) => item.id === node.laneId);
     return {
@@ -178,20 +178,21 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
     const sameLane = sourceLane === targetLane;
     const isSwimlane = layoutMode === "swimlane";
     const backward = targetLaneOrder < sourceLaneOrder;
+    const horizontal = layoutMode === "leftRight";
     const sourceHandle = isSwimlane
       ? sameLane
         ? "bottom-right"
         : backward
           ? "left-lower"
           : "right-lower"
-      : flow.direction === "LR" ? "right" : "bottom";
+      : horizontal ? "right" : "bottom";
     const targetHandle = isSwimlane
       ? sameLane
         ? "top-right"
         : backward
           ? "right-upper"
           : "left-lower"
-      : flow.direction === "LR" ? "left" : "top";
+      : horizontal ? "left" : "top";
     const displayLabel = isSwimlane ? undefined : label;
 
     return {
@@ -211,7 +212,7 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
       },
       pathOptions: {
         borderRadius: isSwimlane ? 10 : 14,
-        offset: isSwimlane ? (sameLane ? 30 : 22) : flow.direction === "LR" ? 34 : 42,
+        offset: isSwimlane ? (sameLane ? 18 : 22) : horizontal ? 34 : 42,
       },
       style: {
         stroke: visual.stroke,
@@ -232,16 +233,17 @@ export function autoLayout(flow: FlowDefinition, layoutMode: LayoutMode = "topDo
     return autoLayoutSwimlane(flow);
   }
 
+  const direction: FlowDefinition["direction"] = layoutMode === "leftRight" ? "LR" : "TD";
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({
-    rankdir: flow.direction,
+    rankdir: direction,
     align: "UL",
-    nodesep: flow.direction === "LR" ? 90 : 70,
-    ranksep: flow.direction === "LR" ? 150 : 115,
+    nodesep: direction === "LR" ? 90 : 70,
+    ranksep: direction === "LR" ? 150 : 155,
     edgesep: 70,
     marginx: 60,
-    marginy: 60,
+    marginy: direction === "TD" ? 86 : 60,
   });
 
   flow.nodes.forEach((node) => {
@@ -281,7 +283,7 @@ export function autoLayout(flow: FlowDefinition, layoutMode: LayoutMode = "topDo
   }
 
   // Re-sort siblings by sortOrder and shift their entire subtrees.
-  const horizontal = flow.direction === "LR";
+  const horizontal = direction === "LR";
   flow.nodes.forEach((node) => {
     const children = flow.edges
       .filter((e) => e.from === node.id && e.to)
@@ -319,6 +321,7 @@ export function autoLayout(flow: FlowDefinition, layoutMode: LayoutMode = "topDo
 
   return {
     ...flow,
+    direction,
     nodes: flow.nodes.map((node) => {
       const pos = positioned.get(node.id);
       if (!pos) return node;
