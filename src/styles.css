@@ -155,6 +155,27 @@ pre {
   grid-row: 2;
 }
 
+.left-panel-footer {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.reset-sample-btn {
+  align-items: center;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  font-size: 11px;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.reset-sample-btn:hover {
+  color: #64748b;
+}
+
 .right-panel {
   border-left: 1px solid #d7e0ea;
   grid-column: 3;

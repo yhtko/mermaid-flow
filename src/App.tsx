@@ -436,9 +436,6 @@ function FlowModeler() {
           <button type="button" onClick={() => fileInputRef.current?.click()}>
             <FileUp size={15} /> Import JSON
           </button>
-          <button type="button" onClick={resetSample}>
-            <RotateCcw size={15} /> Reset Sample
-          </button>
         </div>
         <input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importJson} />
       </header>
@@ -488,6 +485,11 @@ function FlowModeler() {
           onSelect={setSelectedItem}
           onAddSection={addManualSection}
         />
+        <div className="left-panel-footer">
+          <button className="reset-sample-btn" type="button" onClick={resetSample}>
+            <RotateCcw size={13} /> Reset Sample
+          </button>
+        </div>
       </aside>
 
       <section className="canvas-panel">
