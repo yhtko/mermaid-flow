@@ -726,16 +726,17 @@ pre {
 }
 
 .business-node-input-chips {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  justify-content: center;
-  left: 8px;
+  justify-content: flex-start;
+  left: 10px;
   min-height: 22px;
   overflow: visible;
   position: absolute;
-  right: 8px;
-  top: -28px;
+  right: 28px;
+  top: -30px;
   z-index: 5;
 }
 
@@ -749,7 +750,7 @@ pre {
   font-size: 10px;
   font-weight: 700;
   line-height: 1.2;
-  max-width: 100%;
+  max-width: 164px;
   overflow: hidden;
   padding: 3px 6px;
   text-overflow: ellipsis;

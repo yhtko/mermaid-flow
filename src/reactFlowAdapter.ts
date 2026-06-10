@@ -30,7 +30,7 @@ export const SWIMLANE_LANE_WIDTH = 270;
 export const SWIMLANE_LANE_GAP = 24;
 export const SWIMLANE_ROW_HEIGHT = 172;
 export const SWIMLANE_HEADER_HEIGHT = 62;
-export const SWIMLANE_CHIP_SPACE = 34;
+export const SWIMLANE_CHIP_SPACE = 44;
 export const SWIMLANE_PADDING_X = 50;
 export const SWIMLANE_PADDING_Y = 52;
 
@@ -157,14 +157,14 @@ export function toReactFlowEdges(flow: FlowDefinition, layoutMode: LayoutMode = 
     const backward = targetLaneOrder < sourceLaneOrder;
     const sourceHandle = isSwimlane
       ? sameLane
-        ? "bottom"
+        ? "bottom-right"
         : backward
           ? "left-lower"
           : "right-lower"
       : flow.direction === "LR" ? "right" : "bottom";
     const targetHandle = isSwimlane
       ? sameLane
-        ? "top"
+        ? "top-right"
         : backward
           ? "right-upper"
           : "left-lower"
